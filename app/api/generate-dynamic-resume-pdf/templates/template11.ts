@@ -1,0 +1,312 @@
+import { StandardFonts, rgb } from 'pdf-lib';
+import {
+  TemplateContext,
+  drawTextWithBold,
+  formatDate,
+  wrapSkillsAfterCategory,
+  wrapText,
+  wrapTextWithIndent,
+  PDF_BULLET,
+  parseEducationThreePartLine,
+  drawEducationTwoRows,
+} from '../utils';
+
+function parseExperienceLine(line: string): { title: string; company: string; period: string } | null {
+  const match = line.match(/^(.+?) at (.+?):\s*(.+)$/);
+  if (!match) return null;
+  return { title: match[1].trim(), company: match[2].trim(), period: formatDate(match[3].trim()) };
+}
+
+function drawTopRule(context: TemplateContext, left: number, right: number, y: number) {
+  context.page.drawLine({
+    start: { x: left, y },
+    end: { x: right, y },
+    thickness: 1.2,
+    color: rgb(0.2, 0.24, 0.31),
+  });
+}
+
+export async function renderTemplate11(context: TemplateContext): Promise<Uint8Array> {
+  const { pdfDoc, PAGE_HEIGHT, PAGE_WIDTH, body, name, headline, email, phone, location } = context;
+
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const PAGE_MARGIN = 35;
+  const BOTTOM_MARGIN = 42;
+  const HEADER_HEIGHT = 90;
+  const contentX = PAGE_MARGIN;
+  const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
+
+  const PAPER = rgb(1, 1, 1);
+  const INK = rgb(0.12, 0.14, 0.18);
+  const MUTED = rgb(0.36, 0.39, 0.45);
+  const ACCENT = rgb(0.2, 0.24, 0.31);
+  const SECTION_RULE = rgb(0.79, 0.82, 0.87);
+
+  context.page.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, color: PAPER });
+  drawTopRule(context, contentX, contentX + contentWidth, PAGE_HEIGHT - PAGE_MARGIN + 4);
+
+  let headerY = PAGE_HEIGHT - PAGE_MARGIN - 16;
+  if (name) {
+    const nameLines = wrapText(name.toUpperCase(), fontBold, 19.5, contentWidth * 0.62);
+    for (const line of nameLines) {
+      const width = fontBold.widthOfTextAtSize(line, 19.5);
+      context.page.drawText(line, {
+        x: contentX,
+        y: headerY,
+        size: 19.5,
+        font: fontBold,
+        color: INK,
+      });
+      headerY -= 21;
+    }
+  }
+
+  const cleanedHeadline = headline
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/\bwww\.\S+/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  if (cleanedHeadline) {
+    const headlineLines = wrapText(cleanedHeadline, font, 9.4, contentWidth * 0.64);
+    for (const line of headlineLines) {
+      context.page.drawText(line, {
+        x: contentX,
+        y: headerY,
+        size: 9.4,
+        font,
+        color: MUTED,
+      });
+      headerY -= 11;
+    }
+  }
+
+  const contacts = [location, phone, email].filter(Boolean);
+  let contactY = PAGE_HEIGHT - PAGE_MARGIN - 6;
+  if (contacts.length > 0) {
+    const rightColWidth = contentWidth * 0.31;
+    const rightColX = contentX + contentWidth - rightColWidth;
+    for (const part of contacts) {
+      const lines = wrapText(part, font, 8.9, rightColWidth);
+      for (const line of lines) {
+        const lineWidth = font.widthOfTextAtSize(line, 8.9);
+        context.page.drawText(line, {
+          x: contentX + contentWidth - lineWidth,
+          y: contactY,
+          size: 8.9,
+          font,
+          color: MUTED,
+        });
+        contactY -= 10.4;
+      }
+      contactY -= 2;
+    }
+    context.page.drawLine({
+      start: { x: contentX, y: contactY + 4 },
+      end: { x: contentX + contentWidth, y: contactY + 4 },
+      thickness: 0.8,
+      color: SECTION_RULE,
+    });
+  }
+
+  let y = contactY - 10;
+  let currentSection = '';
+  let hasRenderedExperience = false;
+  const lineHeight = 12.7;
+
+  const bodyLines = body.split('\n');
+  const ensurePageSpace = () => {
+    if (y >= BOTTOM_MARGIN) return;
+    context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    context.page.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, color: PAPER });
+    drawTopRule(context, contentX, contentX + contentWidth, PAGE_HEIGHT - PAGE_MARGIN + 4);
+    y = PAGE_HEIGHT - HEADER_HEIGHT + 12;
+  };
+
+  for (const raw of bodyLines) {
+    const line = raw.trim();
+    if (!line) {
+      y -= 6;
+      continue;
+    }
+
+    const isHeader =
+      line.endsWith(':') ||
+      /^(summary|education|experience|professional experience|technical skills|skills)$/i.test(line);
+
+    if (isHeader) {
+      const label = (line.endsWith(':') ? line.slice(0, -1) : line).trim();
+      currentSection = label.toLowerCase();
+      y -= 9;
+      ensurePageSpace();
+
+      context.page.drawText(label.toUpperCase(), {
+        x: contentX,
+        y,
+        size: 10,
+        font: fontBold,
+        color: ACCENT,
+      });
+      y -= 4;
+      context.page.drawLine({
+        start: { x: contentX, y },
+        end: { x: contentX + contentWidth, y },
+        thickness: 0.8,
+        color: SECTION_RULE,
+      });
+      y -= 12;
+      continue;
+    }
+
+    const exp = parseExperienceLine(line);
+    if (exp) {
+      if (hasRenderedExperience) {
+        y -= 7;
+      }
+      ensurePageSpace();
+      const titleLines = wrapText(exp.title, fontBold, 10.3, contentWidth);
+      for (const tLine of titleLines) {
+        drawTextWithBold(context.page, tLine, contentX, y, font, fontBold, 10.3, INK);
+        y -= lineHeight;
+        ensurePageSpace();
+      }
+
+      const companyLines = wrapText(exp.company, font, 9.2, contentWidth * 0.66);
+      const periodWidth = fontBold.widthOfTextAtSize(exp.period, 8.6);
+      const periodX = contentX + contentWidth - periodWidth - 6;
+
+      if (companyLines.length > 0) {
+        context.page.drawText(companyLines[0], { x: contentX, y, size: 9.2, font, color: MUTED });
+        context.page.drawText(exp.period, { x: periodX, y, size: 8.6, font: fontBold, color: MUTED });
+        y -= 11;
+      }
+      for (let i = 1; i < companyLines.length; i++) {
+        ensurePageSpace();
+        context.page.drawText(companyLines[i], { x: contentX, y, size: 9.2, font, color: MUTED });
+        y -= 10.6;
+      }
+      y -= 4;
+      hasRenderedExperience = true;
+      continue;
+    }
+
+    if (currentSection === 'education') {
+      const edu = parseEducationThreePartLine(line);
+      if (edu) {
+        y = drawEducationTwoRows({
+          page: context.page,
+          ensurePageSpace,
+          textLeft: contentX,
+          y,
+          contentWidth,
+          rightEdgeX: contentX + contentWidth,
+          bodyLineHeight: lineHeight,
+          font,
+          fontBold,
+          degreeSize: 10,
+          metaSize: 9,
+          degreeColor: INK,
+          mutedColor: MUTED,
+          degree: edu.degree,
+          institution: edu.institution,
+          periodRaw: edu.period,
+          degreeWrapSubtract: 8,
+        });
+        y -= 3;
+        continue;
+      }
+    }
+
+    const cleaned = line.replace(/^[\-\·•]\s*/, '').trim();
+    const colonIndex = cleaned.indexOf(':');
+    const isSkillsSection = currentSection === 'technical skills' || currentSection === 'skills';
+    const isCategory =
+      colonIndex !== -1 &&
+      (isSkillsSection || line.startsWith('·') || line.startsWith('•') || line.startsWith('-')) &&
+      colonIndex < 44;
+
+    if (isCategory) {
+      const category = cleaned.substring(0, colonIndex + 1).trim();
+      const skills = cleaned.substring(colonIndex + 1).trim();
+      const bulletWidth = font.widthOfTextAtSize(PDF_BULLET + '  ', 9.3);
+      const categoryWidth = fontBold.widthOfTextAtSize(category, 9.3);
+      const wrappedSkills = wrapSkillsAfterCategory(skills, font, 9.3, {
+        left: contentX,
+        bodyInsetLeft: 0,
+        contentWidth,
+        bodyInnerSubtract: 8,
+        bulletWidth,
+        categoryWidth,
+        spaceWidth: font.widthOfTextAtSize(' ', 9.3),
+      });
+
+      ensurePageSpace();
+      context.page.drawText(PDF_BULLET, { x: contentX, y, size: 9.3, font, color: ACCENT });
+      context.page.drawText(category, { x: contentX + bulletWidth, y, size: 9.3, font: fontBold, color: INK });
+      if (wrappedSkills[0]) {
+        context.page.drawText(wrappedSkills[0], {
+          x: contentX + bulletWidth + categoryWidth + font.widthOfTextAtSize(' ', 9.3),
+          y,
+          size: 9.3,
+          font,
+          color: INK,
+        });
+      }
+      for (let i = 1; i < wrappedSkills.length; i++) {
+        y -= lineHeight;
+        ensurePageSpace();
+        context.page.drawText(wrappedSkills[i], {
+          x: contentX + bulletWidth,
+          y,
+          size: 9.3,
+          font,
+          color: INK,
+        });
+      }
+      y -= 14;
+      continue;
+    }
+
+    const hasBullet = /^[\-\·•]\s/.test(line);
+    if (hasBullet) {
+      const wrapped = wrapTextWithIndent(line, font, 9.45, contentWidth - 8);
+      for (let i = 0; i < wrapped.lines.length; i++) {
+        ensurePageSpace();
+        const segment = wrapped.lines[i];
+        if (i === 0) {
+          const bulletMatch = segment.match(/^([\-\·•])\s*(.*)/);
+          if (bulletMatch) {
+            context.page.drawText(PDF_BULLET, { x: contentX, y, size: 9.2, font, color: ACCENT });
+            drawTextWithBold(
+              context.page,
+              bulletMatch[2],
+              contentX + 8,
+              y,
+              font,
+              fontBold,
+              9.45,
+              INK
+            );
+          } else {
+            drawTextWithBold(context.page, segment, contentX, y, font, fontBold, 9.45, INK);
+          }
+        } else {
+          drawTextWithBold(context.page, segment, contentX + 8, y, font, fontBold, 9.45, INK);
+        }
+        y -= lineHeight;
+      }
+      y -= 1;
+      continue;
+    }
+
+    const wrapped = wrapText(line, font, 9.45, contentWidth);
+    for (const segment of wrapped) {
+      ensurePageSpace();
+      drawTextWithBold(context.page, segment, contentX, y, font, fontBold, 9.45, INK);
+      y -= lineHeight;
+    }
+  }
+
+  return await pdfDoc.save();
+}

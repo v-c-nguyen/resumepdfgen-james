@@ -1,0 +1,42 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  resumeText   String   @db.Text
+  customPrompt String?  @db.Text
+  pdfTemplate  Int      @default(1)
+  email        String?
+  phoneNumber  String?
+  fullAddress  String?
+  linkedinUrl       String?
+  jobDescription    String?  @db.Text
+  targetTitle       String?
+  logGenerations    Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+model ResumeGenerationLog {
+  id             String   @id @default(cuid())
+  profileName    String?
+  jobDescription String?  @db.Text
+  resumeText     String   @db.Text
+  company        String?
+  role           String?
+  createdAt      DateTime @default(now())
+
+  @@map("resume_generation_logs")
+}

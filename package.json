@@ -1,0 +1,41 @@
+{
+  "name": "resume-nextjs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev --turbopack",
+    "build": "next build --webpack",
+    "build:turbo": "next build --turbopack",
+    "start": "next start",
+    "lint": "next lint",
+    "clean": "node scripts/clean-build.js",
+    "build:clean": "node scripts/clean-build.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "@vercel/postgres": "^0.10.0",
+    "lucide-react": "^0.564.0",
+    "next": "^16.1.6",
+    "pdf-lib": "^1.17.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@prisma/config": "^7.0.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
+    "eslint": "9.37.0",
+    "eslint-config-next": "^16.1.0",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  }
+}
