@@ -22,7 +22,10 @@ export async function GET() {
       select: {
         name: true,
         resumeText: true,
-        customPrompt: true,
+        customStage1Prompt: true,
+        customStage2Prompt: true,
+        customStage3Prompt: true,
+        customStage4Prompt: true,
         pdfTemplate: true,
         email: true,
         phoneNumber: true,

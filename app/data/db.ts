@@ -5,12 +5,31 @@ import { BaseResumeProfile } from './baseResumes';
 export async function getBaseResumes(): Promise<BaseResumeProfile[]> {
   const profiles = await prisma.profile.findMany({
     orderBy: { name: 'asc' },
+    select: {
+      name: true,
+      resumeText: true,
+      customStage1Prompt: true,
+      customStage2Prompt: true,
+      customStage3Prompt: true,
+      customStage4Prompt: true,
+      pdfTemplate: true,
+      email: true,
+      phoneNumber: true,
+      fullAddress: true,
+      linkedinUrl: true,
+      jobDescription: true,
+      targetTitle: true,
+      logGenerations: true,
+    },
   });
 
   return profiles.map(profile => ({
     name: profile.name,
     resumeText: profile.resumeText,
-    customPrompt: profile.customPrompt || undefined,
+    customStage1Prompt: profile.customStage1Prompt || undefined,
+    customStage2Prompt: profile.customStage2Prompt || undefined,
+    customStage3Prompt: profile.customStage3Prompt || undefined,
+    customStage4Prompt: profile.customStage4Prompt || undefined,
     pdfTemplate: profile.pdfTemplate,
     email: profile.email || undefined,
     phoneNumber: profile.phoneNumber || undefined,
@@ -28,6 +47,22 @@ export async function getBaseResumeByName(name: string | null | undefined): Prom
   
   const profile = await prisma.profile.findUnique({
     where: { name },
+    select: {
+      name: true,
+      resumeText: true,
+      customStage1Prompt: true,
+      customStage2Prompt: true,
+      customStage3Prompt: true,
+      customStage4Prompt: true,
+      pdfTemplate: true,
+      email: true,
+      phoneNumber: true,
+      fullAddress: true,
+      linkedinUrl: true,
+      jobDescription: true,
+      targetTitle: true,
+      logGenerations: true,
+    },
   });
 
   if (!profile) return null;
@@ -35,7 +70,10 @@ export async function getBaseResumeByName(name: string | null | undefined): Prom
   return {
     name: profile.name,
     resumeText: profile.resumeText,
-    customPrompt: profile.customPrompt || undefined,
+    customStage1Prompt: profile.customStage1Prompt || undefined,
+    customStage2Prompt: profile.customStage2Prompt || undefined,
+    customStage3Prompt: profile.customStage3Prompt || undefined,
+    customStage4Prompt: profile.customStage4Prompt || undefined,
     pdfTemplate: profile.pdfTemplate,
     email: profile.email || undefined,
     phoneNumber: profile.phoneNumber || undefined,

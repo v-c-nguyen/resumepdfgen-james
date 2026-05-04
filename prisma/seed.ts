@@ -16,7 +16,10 @@ async function main() {
       data: {
         name: profile.name,
         resumeText: profile.resumeText,
-        customPrompt: profile.customPrompt || null,
+        customStage1Prompt: profile.customStage1Prompt || null,
+        customStage2Prompt: profile.customStage2Prompt || null,
+        customStage3Prompt: profile.customStage3Prompt || null,
+        customStage4Prompt: profile.customStage4Prompt || null,
         pdfTemplate: profile.pdfTemplate || 1,
       },
     });

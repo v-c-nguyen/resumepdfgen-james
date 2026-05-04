@@ -1,17 +1,124 @@
-/**
- * Default prompt template used when building prompts with a job description.
- * Placeholders: ${profileData}, ${jobDescription}, ${targetTitle}
- */
-export const DEFAULT_PROMPT_TEMPLATE = `
-You are a deterministic ATS resume generation engine.
+﻿export const DEFAULT_STAGE1_PROMPT_TEMPLATE = `
+You are a strict classifier and career trajectory planner.
 
-Return ONLY a Markdown resume inside a single code block labeled \`markdown\`.
+INPUT:
+PROFILE:
+\${profileData}
 
-Do NOT output explanations, reasoning, or extra text.
+JOB DESCRIPTION:
+\${jobDescription}
 
 ---
 
-## INPUTS
+OUTPUT JSON ONLY:
+
+{
+  "domain": "Software | DevOps | Data | ML | Cloud | Solutions",
+  "headline": "string",
+  "seniority": "Junior | Mid | Senior",
+  "roles": [
+    {
+      "original_title": "",
+      "normalized_title": "",
+      "adapted_title": ""
+    }
+  ]
+}
+
+---
+
+## PART A — CLASSIFICATION
+
+### Domain Detection
+
+Default:
+? "Software"
+
+Switch ONLY if strong signals (=3):
+
+- DevOps ? CI/CD, Kubernetes, Terraform, infrastructure, pipelines
+- Data ? ETL, Spark, Airflow, warehousing, big data
+- ML ? models, training, NLP, inference
+- Cloud ? AWS/GCP/Azure-heavy infra
+- Solutions ? client-facing, pre-sales, integrations
+
+---
+
+### Headline Rules
+
+- Default: "Senior Software Engineer"
+- If domain ? Software:
+  ? "Senior {Domain} Engineer"
+
+Examples:
+- DevOps ? Senior DevOps Engineer
+- Data ? Senior Data Engineer
+
+---
+
+### Seniority
+
+- =5 years ? Senior
+- 2–5 ? Mid
+- <2 ? Junior
+
+---
+
+## PART B — ROLE PLAN (uses DOMAIN + SENIORITY from Part A)
+
+Infer roles from PROFILE experience history (same order as in PROFILE).
+
+### Step 1: Normalize Titles
+
+- Developer ? Software Engineer
+- Programmer Analyst ? Software Engineer
+
+---
+
+### Step 2: Apply Domain Adaptation
+
+If DOMAIN ? Software:
+
+- Software Engineer ? {Domain} Engineer
+- Senior Software Engineer ? Senior {Domain} Engineer
+
+---
+
+### Step 3: Preserve Trajectory
+
+- Maintain seniority progression
+- Do NOT upgrade or downgrade roles
+- Earlier roles = later roles
+
+---
+
+### Step 4: Partial Transition
+
+- Earlier roles MAY stay as Software Engineer
+- At least 70% should match DOMAIN if strong fit
+
+---
+
+### Step 5: Safeguards
+
+- Do NOT introduce:
+  - Lead, Staff, Principal, Architect
+- Do NOT change unrelated roles
+
+---
+
+## STRICT
+
+- One JSON object only: domain, headline, seniority, and roles together
+- Keep same number of roles as experience entries in PROFILE
+- No explanation
+- JSON only
+`.trim();
+
+export const DEFAULT_STAGE3_PROMPT_TEMPLATE = `
+You are a deterministic resume content generator.
+
+INPUT:
 
 PROFILE:
 \${profileData}
@@ -19,199 +126,236 @@ PROFILE:
 JOB DESCRIPTION:
 \${jobDescription}
 
-TARGET TITLE (DO NOT MODIFY):
-\${targetTitle}
+DOMAIN:
+\${domain}
+
+HEADLINE:
+\${headline}
+
+ROLE PLAN:
+\${roles}
+
+TOTAL ROLES:
+\${experienceCount}
 
 ---
 
-## TITLE CONTROL (STRICT)
-
-Resume headline MUST be exactly:
-→ \${targetTitle}
-
-- Do NOT generate, modify, or infer title
-- JD only influences content, NOT identity
-- Summary must reflect the same role context
-- Experience titles remain unchanged from profile data
-
----
-
-## INTERNAL PROCESS (DO NOT OUTPUT)
-
-- Extract JD keywords (primary, secondary, domain)
-- Infer industry from JD
-- Map JD into Summary, Skills, Experience
-- Embed 1–2 system-level initiatives in recent roles (no project section)
-
----
-
-## OUTPUT FORMAT
-
-'''markdown
-[TARGET TITLE]
-[Candidate Name]
-
-[Contact line: include ONLY fields present in PROFILE data, in this order: Email | Phone | Location | Linkedin]
-[If a field is missing in PROFILE data, omit it entirely. Do not leave placeholders, do not insert dummy values.]
-
-Summary:
-[5–6 sentence single paragraph]
-
-Technical Skills:
-• Category: Skill, Skill, Skill
-
-Experience:
-[Role] at [Company] : [Start – End]
-• Bullet
-
-Education:
-[Degree] | [Institution] | [Year]
-'''
+OUTPUT:
+Return ONLY a Markdown resume in a single \`\`\`markdown code block.
 
 ---
 
 ## SUMMARY
 
-- 5 sentences, single paragraph
-- Include: role context, experience, key technologies, industry alignment,
-  system impact, scalability/reliability, collaboration, business value
+- EXACTLY 5 sentences
+- Align with HEADLINE + DOMAIN
+- Include:
+  - experience
+  - technologies
+  - systems
+  - business impact
 
 ---
 
-## TECHNICAL SKILLS
+## SKILLS
 
-- 6–7 categories
-- ≥ 8 skills per category, ≥ 50 total
-- 50–65% JD keywords
-- no repetitive categories
-- Include testing, CI/CD, and observability when relevant
+- EXACTLY 6 ~ 8 categories
+- EXACTLY 8 ~ 10 skills each
+- 50–60% from JOB DESCRIPTION
+- Include:
+  - testing
+  - CI/CD
+  - monitoring
 
----
-
-## EXPERIENCE (STRICT)
-
-Generate exactly \${profileData.experience.length} roles.
-
-Per role:
-- recent roles: 7–8 bullets
-- older roles: 5–6 bullets
-
-Each bullet MUST:
-- follow: Action + Technology + System + Business Impact (+ metric if meaningful)
-- be 20–40 words, detailed, and natural (no short or fragmented bullets)
-- be a complete sentence and end with a period (.)
+- No duplicates
+- No fake tools
 
 ---
 
-## SYSTEMS THINKING & OWNERSHIP
+## EXPERIENCE
 
-Each role must show:
-- ownership of systems/services (not tasks)
-- end-to-end responsibility
-- architecture/design decisions
-- scalability, reliability, performance awareness
-
-Include 2–3 system-level bullets per role.
+Use ROLE PLAN titles.
 
 ---
 
-## BUSINESS IMPACT
+### Bullet Rules
 
-Every role must connect work to business value:
-- revenue, user growth, engagement, efficiency, cost, SLA, or product impact
+- First 2 roles ? 8 bullets
+- Others ? 6 bullets
 
-Do NOT stop at technical improvements — explain why it matters.
-
----
-
-## METRICS BALANCE (CRITICAL)
-
-Each role MUST include:
-- at least 2–3 metric-driven bullets
-
-Limit:
-- ≤ 40% of bullets may include metrics
-
-Use metrics for:
-- performance, scale, cost, reliability, growth
-
-Avoid metrics for:
-- architecture, ownership, collaboration
-
-Metrics must:
-- be realistic and varied (%, counts, scale like “50K users”, “10M events/day”)
-- include context (system size, users, traffic)
+Each bullet:
+- exactly more than 25 characters
+- Action + Tech + System + Impact
+- End with period
 
 ---
 
-## INDUSTRY ALIGNMENT (DYNAMIC)
+### Metrics
 
-Infer industry from JD using product, users, and business model.
-
-Reference examples:
-FinTech, Healthcare, Security, SaaS, Data, E-commerce, AdTech, EdTech, Logistics,
-Travel, Gaming, Automotive, HR Tech, Insurance, Enterprise Software
-
-Rules:
-- Recent roles must reflect inferred industry
-- Use domain-specific terminology
-- Business impact must match industry context
-
-Do NOT force-fit into any category.
+- EXACTLY 3 bullets per role include metrics
+- Others must NOT
 
 ---
 
-## ATS KEYWORD PRECISION
+### Architecture
 
-Ensure JD-critical tools appear across Skills and Experience:
-- Frontend: React, TypeScript
-- Backend: Node.js, APIs, frameworks
-- Cloud: AWS, GCP, Azure
-- Integrations: APIs, third-party systems (ERP, payments, etc.)
-- Data: pipelines, warehousing (e.g., Snowflake)
-
-Always include:
-- testing frameworks
-- CI/CD tools
-- observability tools
+- EXACTLY 2 bullets per role:
+  - system design / ownership
+  - NO metrics
 
 ---
 
-## EXPERIENCE INTEGRATION (NO PROJECT SECTION)
+### Domain Justification
 
-- Do NOT create a “Project” section
-- Do NOT label bullets as projects
-- Embed system initiatives naturally within roles
-- Include system purpose, architecture, scale, and business impact
+- Bullets MUST reflect DOMAIN
+- If not possible ? fallback to Software concepts
 
 ---
 
-## RECRUITER & CULTURE FIT
+### Style
 
-Include naturally:
-- cross-functional collaboration
-- ownership mindset
-- product thinking
-- communication and accountability
+- No repeated verbs >2 times per role
+- Natural language
+- Present (current), past (previous)
 
 ---
 
-## FINAL RULE
+## MARKDOWN FORMAT
 
-Return ONLY the Markdown resume.
-No extra text.
+\`\`\`markdown
+[HEADLINE]
+[Candidate Name]
 
-## CONTACT DATA INTEGRITY (CRITICAL)
+[Contact line: Email | Phone | Location | LinkedIn]
+- Include ONLY fields present
+- Correct separator formatting
 
-- Use ONLY contact details explicitly present in PROFILE data.
-- NEVER invent, infer, or use placeholder contact values.
-- If phone is missing in PROFILE data, do NOT output a phone number line/value.
-- Forbidden examples: "+63 000 000 0000", "000-000-0000", "N/A", "[Phone]".
+Summary:
+{summary}
+
+Technical Skills:
+• {Category}: skill, skill, skill
+
+Experience:
+{For each role}
+[Title] at [Company] : [Dates]
+• bullet
+
+Education:
+[Degree] | [Institution] | [Year]
+\`\`\`
+
+---
+
+## STRICT
+
+- No extra text
+- No missing sections
+- Clean formatting
+`.trim();
+
+export const DEFAULT_STAGE4_PROMPT_TEMPLATE = `
+You are a deterministic resume formatter.
+
+INPUT:
+
+PROFILE:
+\${profileData}
+
+HEADLINE:
+\${headline}
+
+CONTENT:
+\${contentJson}
+
+---
+
+OUTPUT:
+
+Return ONLY a Markdown resume in a single \`\`\`markdown code block.
+
+---
+
+## FORMAT
+
+\`\`\`markdown
+[HEADLINE]
+[Candidate Name]
+
+[Contact line: Email | Phone | Location | LinkedIn]
+- Include ONLY fields present
+- Correct separator formatting
+
+---
+
+Summary:
+{summary}
+
+---
+
+Technical Skills:
+• {Category}: skill, skill, skill
+
+---
+
+Experience:
+{For each role}
+[Title] at [Company] : [Dates]
+• bullet
+
+---
+
+Education:
+[Degree] | [Institution] | [Year]
+\`\`\`
+
+---
+
+## STRICT
+
+- No extra text
+- No missing sections
+- Clean formatting
 `.trim();
 
 const DEFAULT_TARGET_TITLE = 'Senior Software Engineer';
 
-/** Plain-text resume has no `.experience`; approximate role count for the prompt. */
+export type Stage2Role = {
+  original_title: string;
+  normalized_title: string;
+  adapted_title: string;
+};
+
+export type Stage1Output = {
+  domain: string;
+  headline: string;
+  seniority: string;
+  roles: Stage2Role[];
+};
+
+/** Legacy wrapper used only for optional override of roles in {@link applyPromptPlaceholders}. */
+export type Stage2Output = {
+  roles: Stage2Role[];
+};
+
+export type Stage3SkillCategory = {
+  category: string;
+  items: string[];
+};
+
+export type Stage3ExperienceItem = {
+  title: string;
+  company: string;
+  dates: string;
+  bullets: string[];
+};
+
+export type Stage3Output = {
+  summary: string;
+  skills: Stage3SkillCategory[];
+  experience: Stage3ExperienceItem[];
+};
+
 function experienceCountFromResumeText(resumeText: string): number {
   const lines = resumeText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const roleLike = lines.filter(
@@ -221,7 +365,6 @@ function experienceCountFromResumeText(resumeText: string): number {
   return Math.min(Math.max(n || 1, 1), 20);
 }
 
-/** Split/join avoids RegExp replacement rules when `value` contains `$` or `&`. */
 function substituteLiteral(haystack: string, needle: string, value: string): string {
   return haystack.split(needle).join(value);
 }
@@ -230,24 +373,38 @@ function applyPromptPlaceholders(
   template: string,
   profileData: string,
   jobDescWrapped: string,
-  titleForPrompt: string
+  titleForPrompt: string,
+  stage1Output?: Stage1Output,
+  stage2Output?: Stage2Output,
+  stage3Output?: Stage3Output
 ): string {
   const expCount = String(experienceCountFromResumeText(profileData));
+  const roles =
+    stage2Output?.roles ??
+    stage1Output?.roles;
+  const rolesJson = roles !== undefined ? JSON.stringify(roles, null, 2) : '';
+  const contentJson = stage3Output ? JSON.stringify(stage3Output, null, 2) : '';
+
   let out = template;
-  // Longer / more specific tokens first so `${profileData}` does not truncate `${profileData.experience.length}`
   out = substituteLiteral(out, '${profileData.experience.length}', expCount);
+  out = substituteLiteral(out, '${profileData.experience}', profileData);
+  out = substituteLiteral(out, '${experienceCount}', expCount);
   out = substituteLiteral(out, '${jobDescription}', jobDescWrapped);
   out = substituteLiteral(out, '${targetTitle}', titleForPrompt);
   out = substituteLiteral(out, '${baseResume}', profileData);
   out = substituteLiteral(out, '${profileData}', profileData);
+  out = substituteLiteral(out, '${domain}', stage1Output?.domain ?? '');
+  out = substituteLiteral(out, '${headline}', stage1Output?.headline ?? '');
+  out = substituteLiteral(out, '${seniority}', stage1Output?.seniority ?? '');
+  out = substituteLiteral(out, '${roles}', rolesJson);
+  out = substituteLiteral(out, '${contentJson}', contentJson);
   return out;
 }
 
-// Helper to build OpenAI prompt (profileData = resume text from selected profile)
-export function buildPrompt(
+export function buildStage1Prompt(
   profileData: string,
   jobDescription: string,
-  customPrompt?: string,
+  customStage1Prompt?: string,
   targetTitle?: string
 ) {
   const jobDescWrapped = `{${jobDescription}}`;
@@ -255,10 +412,77 @@ export function buildPrompt(
     ? String(targetTitle).trim()
     : DEFAULT_TARGET_TITLE);
 
-  if (customPrompt) {
-    return applyPromptPlaceholders(customPrompt, profileData, jobDescWrapped, titleForPrompt);
+  if (customStage1Prompt) {
+    return applyPromptPlaceholders(customStage1Prompt, profileData, jobDescWrapped, titleForPrompt);
   }
 
-  return applyPromptPlaceholders(DEFAULT_PROMPT_TEMPLATE, profileData, jobDescWrapped, titleForPrompt);
+  return applyPromptPlaceholders(DEFAULT_STAGE1_PROMPT_TEMPLATE, profileData, jobDescWrapped, titleForPrompt);
+}
+
+export function buildStage3Prompt(
+  profileData: string,
+  jobDescription: string,
+  stage1Output: Stage1Output,
+  customStage3Prompt?: string,
+  targetTitle?: string
+) {
+  const jobDescWrapped = `{${jobDescription}}`;
+  const titleForPrompt = (targetTitle != null && String(targetTitle).trim() !== ''
+    ? String(targetTitle).trim()
+    : DEFAULT_TARGET_TITLE);
+
+  if (customStage3Prompt) {
+    return applyPromptPlaceholders(
+      customStage3Prompt,
+      profileData,
+      jobDescWrapped,
+      titleForPrompt,
+      stage1Output
+    );
+  }
+
+  return applyPromptPlaceholders(
+    DEFAULT_STAGE3_PROMPT_TEMPLATE,
+    profileData,
+    jobDescWrapped,
+    titleForPrompt,
+    stage1Output
+  );
+}
+
+export function buildStage4Prompt(
+  profileData: string,
+  jobDescription: string,
+  stage1Output: Stage1Output,
+  stage3Output: Stage3Output,
+  customStage4Prompt?: string,
+  targetTitle?: string
+) {
+  const jobDescWrapped = `{${jobDescription}}`;
+  const titleForPrompt = (targetTitle != null && String(targetTitle).trim() !== ''
+    ? String(targetTitle).trim()
+    : DEFAULT_TARGET_TITLE);
+
+  if (customStage4Prompt) {
+    return applyPromptPlaceholders(
+      customStage4Prompt,
+      profileData,
+      jobDescWrapped,
+      titleForPrompt,
+      stage1Output,
+      undefined,
+      stage3Output
+    );
+  }
+
+  return applyPromptPlaceholders(
+    DEFAULT_STAGE4_PROMPT_TEMPLATE,
+    profileData,
+    jobDescWrapped,
+    titleForPrompt,
+    stage1Output,
+    undefined,
+    stage3Output
+  );
 }
 

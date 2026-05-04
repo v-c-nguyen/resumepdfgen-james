@@ -3,7 +3,11 @@ import { useState, useEffect } from 'react';
 import { BaseResumeProfile } from '@/app/data/baseResumes';
 import { DEFAULT_RESUME_TEXT_TEMPLATE } from '@/app/data/defaultResumeTemplate';
 import { PDF_TEMPLATE_IDS } from '@/app/data/pdfTemplateIds';
-import { DEFAULT_PROMPT_TEMPLATE } from '@/app/utils/promptBuilder';
+import {
+  DEFAULT_STAGE1_PROMPT_TEMPLATE,
+  DEFAULT_STAGE3_PROMPT_TEMPLATE,
+  DEFAULT_STAGE4_PROMPT_TEMPLATE,
+} from '@/app/utils/promptBuilder';
 
 interface ProfileEditorProps {
   profiles: BaseResumeProfile[];
@@ -83,7 +87,10 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
     setEditingProfile({
       name: '',
       resumeText: DEFAULT_RESUME_TEXT_TEMPLATE,
-      customPrompt: undefined,
+      customStage1Prompt: undefined,
+      customStage2Prompt: undefined,
+      customStage3Prompt: undefined,
+      customStage4Prompt: undefined,
       pdfTemplate: pdfTemplates.length > 0 ? pdfTemplates[0].value : 1,
       email: '',
       phoneNumber: '',
@@ -124,7 +131,10 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
         ? {
             name: editingProfile.name,
             resumeText: editingProfile.resumeText,
-            customPrompt: editingProfile.customPrompt || undefined,
+            customStage1Prompt: editingProfile.customStage1Prompt || undefined,
+            customStage2Prompt: editingProfile.customStage2Prompt || undefined,
+            customStage3Prompt: editingProfile.customStage3Prompt || undefined,
+            customStage4Prompt: editingProfile.customStage4Prompt || undefined,
             pdfTemplate: editingProfile.pdfTemplate || (pdfTemplates.length > 0 ? pdfTemplates[0].value : 1),
             email: editingProfile.email || undefined,
             phoneNumber: editingProfile.phoneNumber || undefined,
@@ -138,7 +148,10 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
             oldName: profiles.find(p => p.name === editingProfile.name)?.name || editingProfile.name,
             name: editingProfile.name,
             resumeText: editingProfile.resumeText,
-            customPrompt: editingProfile.customPrompt || undefined,
+            customStage1Prompt: editingProfile.customStage1Prompt || undefined,
+            customStage2Prompt: editingProfile.customStage2Prompt || undefined,
+            customStage3Prompt: editingProfile.customStage3Prompt || undefined,
+            customStage4Prompt: editingProfile.customStage4Prompt || undefined,
             pdfTemplate: editingProfile.pdfTemplate || (pdfTemplates.length > 0 ? pdfTemplates[0].value : 1),
             email: editingProfile.email || undefined,
             phoneNumber: editingProfile.phoneNumber || undefined,
@@ -234,7 +247,9 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
 
   // If editing, show the edit form
   if (editingProfile) {
-    const currentPrompt = editingProfile.customPrompt || DEFAULT_PROMPT_TEMPLATE;
+    const currentStage1Prompt = editingProfile.customStage1Prompt || DEFAULT_STAGE1_PROMPT_TEMPLATE;
+    const currentStage3Prompt = editingProfile.customStage3Prompt || DEFAULT_STAGE3_PROMPT_TEMPLATE;
+    const currentStage4Prompt = editingProfile.customStage4Prompt || DEFAULT_STAGE4_PROMPT_TEMPLATE;
 
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
@@ -514,15 +529,21 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
           {/* Custom Prompt Editor */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Custom Prompt</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Custom Prompts</h3>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    setEditingProfile({ ...editingProfile, customPrompt: undefined });
+                    setEditingProfile({
+                      ...editingProfile,
+                      customStage1Prompt: undefined,
+                      customStage2Prompt: undefined,
+                      customStage3Prompt: undefined,
+                      customStage4Prompt: undefined,
+                    });
                   }}
                   className="text-sm text-gray-600 hover:text-gray-800 underline"
                 >
-                  Reset to Default
+                  Reset all to defaults
                 </button>
               </div>
             </div>
@@ -532,32 +553,133 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                 <code className="bg-blue-100 px-1 rounded">{"${profileData}"}</code> for resume text,{' '}
                 <code className="bg-blue-100 px-1 rounded">{"${jobDescription}"}</code> for the job description, and{' '}
                 <code className="bg-blue-100 px-1 rounded">{"${targetTitle}"}</code> for the target title from profile settings.
+                Stage 1 is classification + role plan (LLM output includes domain, headline, seniority, and roles).
+                Stage 3 also supports{' '}
+                <code className="bg-blue-100 px-1 rounded">{"${domain}"}</code>,{' '}
+                <code className="bg-blue-100 px-1 rounded">{"${headline}"}</code>,{' '}
+                <code className="bg-blue-100 px-1 rounded">{"${roles}"}</code>, and{' '}
+                <code className="bg-blue-100 px-1 rounded">{"${experienceCount}"}</code>. Stage 4 also supports{' '}
+                <code className="bg-blue-100 px-1 rounded">{"${contentJson}"}</code>.
               </p>
             </div>
-            <textarea
-              value={currentPrompt}
-              onChange={(e) => {
-                const newPrompt = e.target.value;
-                // If user edits away from default, set as custom
-                if (newPrompt !== DEFAULT_PROMPT_TEMPLATE) {
-                  setEditingProfile({ ...editingProfile, customPrompt: newPrompt });
-                } else {
-                  setEditingProfile({ ...editingProfile, customPrompt: undefined });
-                }
-              }}
-              rows={20}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
-              placeholder="Enter custom prompt here..."
-            />
-            <p className="mt-2 text-xs text-gray-500">
-              {currentPrompt.length} characters
-              {editingProfile.customPrompt && (
-                <span className="ml-2 text-blue-600">• Custom prompt is active</span>
-              )}
-              {!editingProfile.customPrompt && (
-                <span className="ml-2 text-gray-500">• Using default prompt</span>
-              )}
-            </p>
+            <div className="space-y-5">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Stage 1 Prompt (classification + role plan)</label>
+                  <button
+                    onClick={() => {
+                      setEditingProfile({
+                        ...editingProfile,
+                        customStage1Prompt: undefined
+                      });
+                    }}
+                    className="text-xs text-gray-600 hover:text-gray-800 underline"
+                  >
+                    Reset Stage 1
+                  </button>
+                </div>
+                <textarea
+                  value={currentStage1Prompt}
+                  onChange={(e) => {
+                    const newPrompt = e.target.value;
+                    if (newPrompt !== DEFAULT_STAGE1_PROMPT_TEMPLATE) {
+                      setEditingProfile({
+                        ...editingProfile,
+                        customStage1Prompt: newPrompt
+                      });
+                    } else {
+                      setEditingProfile({
+                        ...editingProfile,
+                        customStage1Prompt: undefined
+                      });
+                    }
+                  }}
+                  rows={14}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
+                  placeholder="Enter custom Stage 1 prompt here..."
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  {currentStage1Prompt.length} characters
+                  {editingProfile.customStage1Prompt ? (
+                    <span className="ml-2 text-blue-600">• Stage 1 custom prompt is active</span>
+                  ) : (
+                    <span className="ml-2 text-gray-500">• Using default Stage 1 prompt</span>
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Stage 3 Prompt (markdown resume)</label>
+                  <button
+                    onClick={() => {
+                      setEditingProfile({ ...editingProfile, customStage3Prompt: undefined });
+                    }}
+                    className="text-xs text-gray-600 hover:text-gray-800 underline"
+                  >
+                    Reset Stage 3
+                  </button>
+                </div>
+                <textarea
+                  value={currentStage3Prompt}
+                  onChange={(e) => {
+                    const newPrompt = e.target.value;
+                    if (newPrompt !== DEFAULT_STAGE3_PROMPT_TEMPLATE) {
+                      setEditingProfile({ ...editingProfile, customStage3Prompt: newPrompt });
+                    } else {
+                      setEditingProfile({ ...editingProfile, customStage3Prompt: undefined });
+                    }
+                  }}
+                  rows={14}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
+                  placeholder="Enter custom Stage 3 prompt here..."
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  {currentStage3Prompt.length} characters
+                  {editingProfile.customStage3Prompt ? (
+                    <span className="ml-2 text-blue-600">• Stage 3 custom prompt is active</span>
+                  ) : (
+                    <span className="ml-2 text-gray-500">• Using default Stage 3 prompt</span>
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Stage 4 Prompt</label>
+                  <button
+                    onClick={() => {
+                      setEditingProfile({ ...editingProfile, customStage4Prompt: undefined });
+                    }}
+                    className="text-xs text-gray-600 hover:text-gray-800 underline"
+                  >
+                    Reset Stage 4
+                  </button>
+                </div>
+                <textarea
+                  value={currentStage4Prompt}
+                  onChange={(e) => {
+                    const newPrompt = e.target.value;
+                    if (newPrompt !== DEFAULT_STAGE4_PROMPT_TEMPLATE) {
+                      setEditingProfile({ ...editingProfile, customStage4Prompt: newPrompt });
+                    } else {
+                      setEditingProfile({ ...editingProfile, customStage4Prompt: undefined });
+                    }
+                  }}
+                  rows={14}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
+                  placeholder="Enter custom Stage 4 prompt here..."
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  {currentStage4Prompt.length} characters
+                  {editingProfile.customStage4Prompt ? (
+                    <span className="ml-2 text-blue-600">• Stage 4 custom prompt is active</span>
+                  ) : (
+                    <span className="ml-2 text-gray-500">• Using default Stage 4 prompt</span>
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-4 pt-4">
@@ -620,8 +742,14 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">{profile.name}</h3>
                   <div className="space-y-1 text-sm text-gray-600">
                     <p>Resume Text: {profile.resumeText.length} characters</p>
-                    {profile.customPrompt && (
-                      <p className="text-blue-600">✓ Custom prompt configured</p>
+                    {profile.customStage1Prompt && (
+                      <p className="text-blue-600">✓ Stage 1 custom prompt configured</p>
+                    )}
+                    {profile.customStage3Prompt && (
+                      <p className="text-blue-600">✓ Stage 3 custom prompt configured</p>
+                    )}
+                    {profile.customStage4Prompt && (
+                      <p className="text-blue-600">✓ Stage 4 custom prompt configured</p>
                     )}
                     <p>PDF Template: {(() => {
                       const template = pdfTemplates.find(t => t.value === (profile.pdfTemplate || (pdfTemplates.length > 0 ? pdfTemplates[0].value : 1)));

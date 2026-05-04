@@ -14,7 +14,10 @@ model Profile {
   id           String   @id @default(cuid())
   name         String   @unique
   resumeText   String   @db.Text
-  customPrompt String?  @db.Text
+  customStage1Prompt String? @db.Text
+  customStage2Prompt String? @db.Text
+  customStage3Prompt String? @db.Text
+  customStage4Prompt String? @db.Text
   pdfTemplate  Int      @default(1)
   email        String?
   phoneNumber  String?

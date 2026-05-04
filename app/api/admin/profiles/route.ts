@@ -16,6 +16,25 @@ export async function GET(req: NextRequest) {
   try {
     const profiles = await prisma.profile.findMany({
       orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        resumeText: true,
+        customStage1Prompt: true,
+        customStage2Prompt: true,
+        customStage3Prompt: true,
+        customStage4Prompt: true,
+        pdfTemplate: true,
+        email: true,
+        phoneNumber: true,
+        fullAddress: true,
+        linkedinUrl: true,
+        jobDescription: true,
+        targetTitle: true,
+        logGenerations: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
     return NextResponse.json({ profiles });
   } catch (error) {
@@ -33,7 +52,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, resumeText, customPrompt, pdfTemplate, email, phoneNumber, fullAddress, linkedinUrl, jobDescription, targetTitle, logGenerations } = await req.json();
+    const {
+      name,
+      resumeText,
+      customStage1Prompt,
+      customStage2Prompt,
+      customStage3Prompt,
+      customStage4Prompt,
+      pdfTemplate,
+      email,
+      phoneNumber,
+      fullAddress,
+      linkedinUrl,
+      jobDescription,
+      targetTitle,
+      logGenerations
+    } = await req.json();
     
     if (!name || !resumeText) {
       return NextResponse.json(
@@ -45,6 +79,7 @@ export async function POST(req: NextRequest) {
     // Check if profile with same name exists
     const existingProfile = await prisma.profile.findUnique({
       where: { name },
+      select: { id: true },
     });
     
     if (existingProfile) {
@@ -58,7 +93,10 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         resumeText,
-        customPrompt: customPrompt || null,
+        customStage1Prompt: customStage1Prompt || null,
+        customStage2Prompt: customStage2Prompt || null,
+        customStage3Prompt: customStage3Prompt || null,
+        customStage4Prompt: customStage4Prompt || null,
         pdfTemplate: pdfTemplate ?? 1,
         email: email || null,
         phoneNumber: phoneNumber || null,
@@ -86,7 +124,23 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
-    const { oldName, name, resumeText, customPrompt, pdfTemplate, email, phoneNumber, fullAddress, linkedinUrl, jobDescription, targetTitle, logGenerations } = await req.json();
+    const {
+      oldName,
+      name,
+      resumeText,
+      customStage1Prompt,
+      customStage2Prompt,
+      customStage3Prompt,
+      customStage4Prompt,
+      pdfTemplate,
+      email,
+      phoneNumber,
+      fullAddress,
+      linkedinUrl,
+      jobDescription,
+      targetTitle,
+      logGenerations
+    } = await req.json();
     
     if (!oldName || !name || !resumeText) {
       return NextResponse.json(
@@ -98,6 +152,13 @@ export async function PUT(req: NextRequest) {
     // Check if old profile exists
     const existingProfile = await prisma.profile.findUnique({
       where: { name: oldName },
+      select: {
+        id: true,
+        customStage1Prompt: true,
+        customStage2Prompt: true,
+        customStage3Prompt: true,
+        customStage4Prompt: true,
+      },
     });
     
     if (!existingProfile) {
@@ -111,6 +172,7 @@ export async function PUT(req: NextRequest) {
     if (oldName !== name) {
       const nameConflict = await prisma.profile.findUnique({
         where: { name },
+        select: { id: true },
       });
       
       if (nameConflict) {
@@ -126,7 +188,12 @@ export async function PUT(req: NextRequest) {
       data: {
         name,
         resumeText,
-        customPrompt: customPrompt || null,
+        customStage1Prompt: customStage1Prompt === undefined ? existingProfile.customStage1Prompt : (customStage1Prompt || null),
+        customStage2Prompt: customStage2Prompt === undefined ? existingProfile.customStage2Prompt : (customStage2Prompt || null),
+        customStage3Prompt:
+          customStage3Prompt === undefined ? existingProfile.customStage3Prompt : (customStage3Prompt || null),
+        customStage4Prompt:
+          customStage4Prompt === undefined ? existingProfile.customStage4Prompt : (customStage4Prompt || null),
         pdfTemplate: pdfTemplate ?? 1,
         email: email || null,
         phoneNumber: phoneNumber || null,
@@ -167,6 +234,7 @@ export async function DELETE(req: NextRequest) {
     // Check if profile exists
     const existingProfile = await prisma.profile.findUnique({
       where: { name },
+      select: { id: true },
     });
     
     if (!existingProfile) {

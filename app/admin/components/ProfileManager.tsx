@@ -19,7 +19,8 @@ export default function ProfileManager({ profiles, onUpdate }: ProfileManagerPro
     setEditingProfile({
       name: '',
       resumeText: DEFAULT_RESUME_TEXT_TEMPLATE,
-      customPrompt: undefined,
+      customStage1Prompt: undefined,
+      customStage2Prompt: undefined,
       email: '',
       phoneNumber: '',
       fullAddress: '',
@@ -56,7 +57,8 @@ export default function ProfileManager({ profiles, onUpdate }: ProfileManagerPro
         ? {
             name: editingProfile.name,
             resumeText: editingProfile.resumeText,
-            customPrompt: editingProfile.customPrompt || undefined,
+            customStage1Prompt: editingProfile.customStage1Prompt || undefined,
+            customStage2Prompt: editingProfile.customStage2Prompt || undefined,
             email: editingProfile.email || undefined,
             phoneNumber: editingProfile.phoneNumber || undefined,
             fullAddress: editingProfile.fullAddress || undefined,
@@ -69,7 +71,8 @@ export default function ProfileManager({ profiles, onUpdate }: ProfileManagerPro
             oldName: profiles.find(p => p.name === editingProfile.name)?.name || editingProfile.name,
             name: editingProfile.name,
             resumeText: editingProfile.resumeText,
-            customPrompt: editingProfile.customPrompt || undefined,
+            customStage1Prompt: editingProfile.customStage1Prompt || undefined,
+            customStage2Prompt: editingProfile.customStage2Prompt || undefined,
             email: editingProfile.email || undefined,
             phoneNumber: editingProfile.phoneNumber || undefined,
             fullAddress: editingProfile.fullAddress || undefined,
@@ -313,9 +316,9 @@ export default function ProfileManager({ profiles, onUpdate }: ProfileManagerPro
                   <p className="text-sm text-gray-600 mb-2">
                     Resume Text: {profile.resumeText.length} characters
                   </p>
-                  {profile.customPrompt && (
+                  {profile.customStage1Prompt && (
                     <p className="text-sm text-blue-600 mb-2">
-                      ✓ Custom prompt configured
+                      ✓ Stage 1 custom prompt configured
                     </p>
                   )}
                 </div>

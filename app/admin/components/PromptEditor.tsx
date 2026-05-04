@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DEFAULT_PROMPT_TEMPLATE } from '@/app/utils/promptBuilder';
+import { DEFAULT_STAGE1_PROMPT_TEMPLATE } from '@/app/utils/promptBuilder';
 import { BaseResumeProfile } from '@/app/data/baseResumes';
 
 interface PromptEditorProps {
@@ -27,11 +27,12 @@ export default function PromptEditor({
     if (selectedProfile) {
       const profile = profiles.find(p => p.name === selectedProfile);
       if (profile) {
-        if (profile.customPrompt) {
-          setCustomPrompt(profile.customPrompt);
+        const stage1Prompt = profile.customStage1Prompt;
+        if (stage1Prompt) {
+          setCustomPrompt(stage1Prompt);
           setDefaultPrompt('');
         } else {
-          setDefaultPrompt(DEFAULT_PROMPT_TEMPLATE);
+          setDefaultPrompt(DEFAULT_STAGE1_PROMPT_TEMPLATE);
           setCustomPrompt('');
         }
       }
@@ -66,7 +67,7 @@ export default function PromptEditor({
           oldName: profile.name,
           name: profile.name,
           resumeText: profile.resumeText,
-          customPrompt: isDefaultPrompt ? undefined : promptToSave,
+          customStage1Prompt: isDefaultPrompt ? undefined : promptToSave,
           pdfTemplate: profile.pdfTemplate ?? 1,
           email: profile.email,
           phoneNumber: profile.phoneNumber,
@@ -102,7 +103,7 @@ export default function PromptEditor({
     if (selectedProfile) {
       const profile = profiles.find(p => p.name === selectedProfile);
       if (profile) {
-        setDefaultPrompt(DEFAULT_PROMPT_TEMPLATE);
+        setDefaultPrompt(DEFAULT_STAGE1_PROMPT_TEMPLATE);
         setCustomPrompt('');
       }
     }
@@ -185,16 +186,16 @@ export default function PromptEditor({
               />
               <p className="mt-2 text-xs text-gray-500">
                 {(customPrompt || defaultPrompt).length} characters
-                {selectedProfileData.customPrompt && (
+                {selectedProfileData.customStage1Prompt && (
                   <span className="ml-2 text-blue-600">• Custom prompt is active</span>
                 )}
-                {!selectedProfileData.customPrompt && customPrompt && (
+                {!selectedProfileData.customStage1Prompt && customPrompt && (
                   <span className="ml-2 text-yellow-600">• Unsaved custom prompt</span>
                 )}
               </p>
             </div>
 
-            {!selectedProfileData.customPrompt && !customPrompt && defaultPrompt && (
+            {!selectedProfileData.customStage1Prompt && !customPrompt && defaultPrompt && (
               <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
                   <strong>Using default prompt.</strong> Edit the text above to create a custom prompt for this profile.
@@ -210,12 +211,12 @@ export default function PromptEditor({
               >
                 {saving ? 'Saving...' : 'Save Prompt'}
               </button>
-               {selectedProfileData.customPrompt && (
+               {selectedProfileData.customStage1Prompt && (
                  <button
                    onClick={async () => {
                      setCustomPrompt('');
-                     setDefaultPrompt(DEFAULT_PROMPT_TEMPLATE);
-                     // Save with undefined customPrompt to clear it
+                     setDefaultPrompt(DEFAULT_STAGE1_PROMPT_TEMPLATE);
+                    // Save with undefined customStage1Prompt to clear it
                      const response = await fetch('/api/admin/profiles', {
                        method: 'PUT',
                        headers: { 'Content-Type': 'application/json' },
@@ -223,7 +224,7 @@ export default function PromptEditor({
                          oldName: selectedProfileData.name,
                          name: selectedProfileData.name,
                          resumeText: selectedProfileData.resumeText,
-                         customPrompt: undefined,
+                         customStage1Prompt: undefined,
                          pdfTemplate: selectedProfileData.pdfTemplate ?? 1,
                          email: selectedProfileData.email,
                          phoneNumber: selectedProfileData.phoneNumber,

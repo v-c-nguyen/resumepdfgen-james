@@ -142,7 +142,6 @@ export async function POST(req: NextRequest) {
 
     // 2. Use profile already loaded above for template selection
     // const baseResume: string = profile?.resumeText || ``;
-    // const customPrompt = profile?.customPrompt;
     const pdfTemplate = profile?.pdfTemplate || 1;
 
     const tailoredResume = jobDescription;

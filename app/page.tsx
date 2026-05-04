@@ -2,7 +2,11 @@
 import { useRef, useEffect, useState } from 'react';
 import { Copy, Check, Mail, Phone, MapPin, Linkedin, Sparkles, FileDown } from 'lucide-react';
 import { BaseResumeProfile } from './data/baseResumes';
-import { buildPrompt } from './utils/promptBuilder';
+import {
+  buildStage1Prompt,
+  buildStage3Prompt,
+  Stage1Output,
+} from './utils/promptBuilder';
 
 const btnMotion = 'transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]';
 
@@ -12,7 +16,10 @@ export default function Home() {
   const [selectedProfileName, setSelectedProfileName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [jobDescriptionForPrompt, setJobDescriptionForPrompt] = useState('');
+  const [stage1Json, setStage1Json] = useState('');
   const [promptCopied, setPromptCopied] = useState(false);
+  const [promptCopyMessage, setPromptCopyMessage] = useState('Copied to clipboard');
+  const [stageError, setStageError] = useState('');
   const [copiedField, setCopiedField] = useState<'email' | 'phone' | 'address' | 'linkedin' | null>(null);
 
   const effectiveProfileName = selectedProfileName || baseResumes[0]?.name;
@@ -50,22 +57,89 @@ export default function Home() {
     fetchProfiles();
   }, []);
 
-  const handleGeneratePromptWithJobDescription = async () => {
-    const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
-    const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
-    const promptText = buildPrompt(
-      profileData,
-      jobDesc,
-      selectedProfile?.customPrompt,
-      selectedProfile?.targetTitle
-    );
+  const copyPromptToClipboard = async (promptText: string, copiedMessage: string) => {
     try {
       await navigator.clipboard.writeText(promptText);
+      setPromptCopyMessage(copiedMessage);
       setPromptCopied(true);
       setTimeout(() => setPromptCopied(false), 2000);
     } catch {
       setPromptCopied(false);
     }
+  };
+
+  const parseStage1Json = (): Stage1Output | null => {
+    const raw = stage1Json.trim();
+    if (!raw) {
+      setStageError('Please paste Stage 1 JSON output first.');
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<Stage1Output>;
+      const domain = typeof parsed.domain === 'string' ? parsed.domain.trim() : '';
+      const headline = typeof parsed.headline === 'string' ? parsed.headline.trim() : '';
+      const seniority = typeof parsed.seniority === 'string' ? parsed.seniority.trim() : '';
+
+      if (!domain || !headline || !seniority) {
+        setStageError('Stage 1 JSON must include non-empty "domain", "headline", and "seniority".');
+        return null;
+      }
+
+      if (!Array.isArray(parsed.roles)) {
+        setStageError('Stage 1 JSON must include a "roles" array.');
+        return null;
+      }
+
+      const roles = parsed.roles.map((r) => ({
+        original_title: typeof r?.original_title === 'string' ? r.original_title.trim() : '',
+        normalized_title: typeof r?.normalized_title === 'string' ? r.normalized_title.trim() : '',
+        adapted_title: typeof r?.adapted_title === 'string' ? r.adapted_title.trim() : '',
+      }));
+
+      if (roles.some((r) => !r.original_title || !r.normalized_title || !r.adapted_title)) {
+        setStageError(
+          'Each role must include non-empty "original_title", "normalized_title", and "adapted_title".'
+        );
+        return null;
+      }
+
+      setStageError('');
+      return { domain, headline, seniority, roles };
+    } catch {
+      setStageError('Stage 1 output is not valid JSON.');
+      return null;
+    }
+  };
+
+  const handleGenerateStage1Prompt = async () => {
+    const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
+    const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
+    const promptText = buildStage1Prompt(
+      profileData,
+      jobDesc,
+      selectedProfile?.customStage1Prompt,
+      selectedProfile?.targetTitle
+    );
+    setStageError('');
+    await copyPromptToClipboard(promptText, 'Stage 1 prompt copied');
+  };
+
+  /** Builds the markdown resume prompt (formerly “stage 3” in code / DB: customStage3Prompt). */
+  const handleGenerateMarkdownPrompt = async () => {
+    const stage1Output = parseStage1Json();
+    if (!stage1Output) return;
+
+    const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
+    const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
+    const promptText = buildStage3Prompt(
+      profileData,
+      jobDesc,
+      stage1Output,
+      selectedProfile?.customStage3Prompt,
+      selectedProfile?.targetTitle
+    );
+    await copyPromptToClipboard(promptText, 'Stage 2 prompt copied');
   };
 
   const inputClass =
@@ -163,19 +237,41 @@ export default function Home() {
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={handleGeneratePromptWithJobDescription}
+                onClick={handleGenerateStage1Prompt}
                 className={`inline-flex items-center gap-2 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-2 px-4 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
               >
                 <Sparkles className="size-4 shrink-0" />
-                Generate prompt
+                Generate prompt for Stage 1
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateMarkdownPrompt}
+                className={`inline-flex items-center gap-2 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-2 px-4 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+              >
+                <Sparkles className="size-4 shrink-0" />
+                Generate prompt for Stage 2 (markdown)
               </button>
               {promptCopied && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md py-1.5 px-2.5 animate-copy-in">
                   <Check className="size-3.5 shrink-0" />
-                  Copied to clipboard
+                  {promptCopyMessage}
                 </span>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Stage 1 output JSON</label>
+            <textarea
+              value={stage1Json}
+              onChange={(e) => setStage1Json(e.target.value)}
+              rows={6}
+              placeholder='{"domain":"...","headline":"...","seniority":"...","roles":[...]}'
+              className={`${inputClass} resize-none font-mono text-sm`}
+            />
+            {stageError && (
+              <p className="mt-2 text-xs text-red-600">{stageError}</p>
+            )}
           </div>
 
           <div>
