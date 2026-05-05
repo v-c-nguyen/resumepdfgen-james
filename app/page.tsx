@@ -3,8 +3,10 @@ import { useRef, useEffect, useState } from 'react';
 import { Copy, Check, Mail, Phone, MapPin, Linkedin, Sparkles, FileDown } from 'lucide-react';
 import { BaseResumeProfile } from './data/baseResumes';
 import {
+  buildFallbackStage1Output,
   buildStage1Prompt,
   buildStage3Prompt,
+  QA_PROMPT_TEMPLATE,
   Stage1Output,
 } from './utils/promptBuilder';
 
@@ -71,7 +73,7 @@ export default function Home() {
   const parseStage1Json = (): Stage1Output | null => {
     const raw = stage1Json.trim();
     if (!raw) {
-      setStageError('Please paste Stage 1 JSON output first.');
+      setStageError('');
       return null;
     }
 
@@ -127,10 +129,8 @@ export default function Home() {
 
   /** Builds the markdown resume prompt (formerly “stage 3” in code / DB: customStage3Prompt). */
   const handleGenerateMarkdownPrompt = async () => {
-    const stage1Output = parseStage1Json();
-    if (!stage1Output) return;
-
     const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
+    const stage1Output = parseStage1Json() ?? buildFallbackStage1Output(profileData, selectedProfile?.targetTitle);
     const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
     const promptText = buildStage3Prompt(
       profileData,
@@ -140,6 +140,10 @@ export default function Home() {
       selectedProfile?.targetTitle
     );
     await copyPromptToClipboard(promptText, 'Stage 2 prompt copied');
+  };
+
+  const handleGenerateQaPrompt = async () => {
+    await copyPromptToClipboard(QA_PROMPT_TEMPLATE, 'QA prompt copied');
   };
 
   const inputClass =
@@ -251,6 +255,14 @@ export default function Home() {
                 <Sparkles className="size-4 shrink-0" />
                 Generate prompt for Stage 2 (markdown)
               </button>
+              <button
+                type="button"
+                onClick={handleGenerateQaPrompt}
+                className={`inline-flex items-center gap-2 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-2 px-4 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+              >
+                <Sparkles className="size-4 shrink-0" />
+                Generate QA prompt
+              </button>
               {promptCopied && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md py-1.5 px-2.5 animate-copy-in">
                   <Check className="size-3.5 shrink-0" />
@@ -261,7 +273,7 @@ export default function Home() {
           </div>
 
           <div>
-            <label className={labelClass}>Stage 1 output JSON</label>
+            <label className={labelClass}>Stage 1 output JSON (optional)</label>
             <textarea
               value={stage1Json}
               onChange={(e) => setStage1Json(e.target.value)}

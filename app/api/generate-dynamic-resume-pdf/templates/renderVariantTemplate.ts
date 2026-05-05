@@ -5,7 +5,9 @@ import {
   wrapTextWithIndent,
   formatDate,
   drawTextWithBold,
-  PDF_BULLET,
+  drawTextWithWordGap,
+  measureLineWidthWithWordGap,
+  PDF_BULLET_DOT,
   wrapSkillsAfterCategory,
   parseEducationThreePartLine,
   drawEducationTwoRows,
@@ -26,12 +28,14 @@ export interface VariantConfig {
   headerHeight: number;
   /** When `kind` is `emerald` (template 13): black palette, no left accent bar on section headers. */
   emeraldPlainStyle?: boolean;
+  /** Wider inter-word spacing (used by templates 13–14). */
+  wordGapExtra?: number;
 }
 
 function drawHeader(context: TemplateContext, config: VariantConfig, serifFont: TemplateContext['font'], serifBoldFont: TemplateContext['fontBold']) {
   const { page, PAGE_WIDTH, PAGE_HEIGHT, name, headline, email, phone, location } = context;
   const contentWidth = PAGE_WIDTH - config.marginLeft - config.marginRight;
-  const headerBottomY = PAGE_HEIGHT - config.headerHeight;
+  const wg = config.wordGapExtra ?? 0;
   
   const contactParts = [location, phone, email].filter(Boolean);
   const headlineWithoutLinks = headline
@@ -85,17 +89,45 @@ function drawHeader(context: TemplateContext, config: VariantConfig, serifFont: 
     page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 6, width: PAGE_WIDTH, height: 6, color: accent });
     const centerX = PAGE_WIDTH / 2;
     if (name) {
-      const nW = serifBoldFont.widthOfTextAtSize(name.toUpperCase(), config.nameSize);
-      page.drawText(name.toUpperCase(), { x: centerX - nW / 2, y: PAGE_HEIGHT - 44, size: config.nameSize, font: serifBoldFont, color: nameColor });
+      const nameText = name.toUpperCase();
+      const nW = measureLineWidthWithWordGap(nameText, serifBoldFont, config.nameSize, wg);
+      drawTextWithWordGap(
+        page,
+        nameText,
+        centerX - nW / 2,
+        PAGE_HEIGHT - 44,
+        config.nameSize,
+        serifBoldFont,
+        nameColor,
+        wg
+      );
     }
     if (headlineWithoutLinks) {
-      const hW = serifFont.widthOfTextAtSize(headlineWithoutLinks, config.headlineSize);
-      page.drawText(headlineWithoutLinks, { x: centerX - hW / 2, y: PAGE_HEIGHT - 63, size: config.headlineSize, font: serifFont, color: subColor });
+      const hW = measureLineWidthWithWordGap(headlineWithoutLinks, serifFont, config.headlineSize, wg);
+      drawTextWithWordGap(
+        page,
+        headlineWithoutLinks,
+        centerX - hW / 2,
+        PAGE_HEIGHT - 63,
+        config.headlineSize,
+        serifFont,
+        subColor,
+        wg
+      );
     }
     if (contactParts.length) {
       const text = contactParts.join(plain ? '  |  ' : '   •   ');
-      const w = serifFont.widthOfTextAtSize(text, config.contactSize);
-      page.drawText(text, { x: centerX - w / 2, y: PAGE_HEIGHT - 79, size: config.contactSize, font: serifFont, color: subColor });
+      const w = measureLineWidthWithWordGap(text, serifFont, config.contactSize, wg);
+      drawTextWithWordGap(
+        page,
+        text,
+        centerX - w / 2,
+        PAGE_HEIGHT - 79,
+        config.contactSize,
+        serifFont,
+        subColor,
+        wg
+      );
     }
     return;
   }
@@ -110,24 +142,44 @@ function drawHeader(context: TemplateContext, config: VariantConfig, serifFont: 
     let headlineY = defaultHeadlineY;
 
     if (name) {
-      page.drawText(name.toUpperCase(), { x: config.marginLeft, y: nameY, size: config.nameSize, font: serifBoldFont, color: rgb(0, 0, 0) });
+      drawTextWithWordGap(
+        page,
+        name.toUpperCase(),
+        config.marginLeft,
+        nameY,
+        config.nameSize,
+        serifBoldFont,
+        rgb(0, 0, 0),
+        wg
+      );
     }
 
     if (contactParts.length) {
       const text = contactParts.join(' | ');
-      const contactW = serifFont.widthOfTextAtSize(text, config.contactSize);
-      const nameW = name ? serifBoldFont.widthOfTextAtSize(name.toUpperCase(), config.nameSize) : 0;
+      const contactW = measureLineWidthWithWordGap(text, serifFont, config.contactSize, wg);
+      const nameW = name
+        ? measureLineWidthWithWordGap(name.toUpperCase(), serifBoldFont, config.nameSize, wg)
+        : 0;
       const contactFitsBesideName =
         !name || config.marginLeft + nameW + gapNameToContact + contactW <= PAGE_WIDTH - config.marginRight;
 
       if (contactFitsBesideName) {
-        page.drawText(text, { x: PAGE_WIDTH - config.marginRight - contactW, y: nameY, size: config.contactSize, font: serifFont, color: subColor });
+        drawTextWithWordGap(
+          page,
+          text,
+          PAGE_WIDTH - config.marginRight - contactW,
+          nameY,
+          config.contactSize,
+          serifFont,
+          subColor,
+          wg
+        );
       } else {
         const contactLineHeight = config.contactSize * 1.32;
-        const lines = wrapText(text, serifFont, config.contactSize, contentWidth);
+        const lines = wrapText(text, serifFont, config.contactSize, contentWidth, wg);
         let y = nameY - Math.max(22, config.nameSize * 0.72);
         for (const line of lines) {
-          page.drawText(line, { x: config.marginLeft, y, size: config.contactSize, font: serifFont, color: subColor });
+          drawTextWithWordGap(page, line, config.marginLeft, y, config.contactSize, serifFont, subColor, wg);
           y -= contactLineHeight;
         }
         headlineY = y - 9;
@@ -135,7 +187,16 @@ function drawHeader(context: TemplateContext, config: VariantConfig, serifFont: 
     }
 
     if (headlineWithoutLinks) {
-      page.drawText(headlineWithoutLinks, { x: config.marginLeft, y: headlineY, size: config.headlineSize, font: serifFont, color: subColor });
+      drawTextWithWordGap(
+        page,
+        headlineWithoutLinks,
+        config.marginLeft,
+        headlineY,
+        config.headlineSize,
+        serifFont,
+        subColor,
+        wg
+      );
     }
     return;
   }
@@ -169,6 +230,7 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
   const { body, PAGE_HEIGHT, PAGE_WIDTH, pdfDoc } = context;
   const left = config.marginLeft;
   const contentWidth = PAGE_WIDTH - config.marginLeft - config.marginRight;
+  const wg = config.wordGapExtra ?? 0;
   const bodyLineHeight = config.bodySize * 1.45;
   const sectionLineHeight = config.sectionHeaderSize * 1.26;
   /** Slightly larger than body text so list markers read more clearly. */
@@ -200,11 +262,27 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
   const drawSplit = (leftText: string, rightText: string) => {
     const rightWidth = serifFont.widthOfTextAtSize(rightText, config.bodySize - 0.2);
     const rightX = rightEdgeX - rightWidth;
-    const leftLines = wrapText(leftText, serifFont, config.bodySize - 0.2, Math.max(100, rightX - left - 12));
+    const leftLines = wrapText(
+      leftText,
+      serifFont,
+      config.bodySize - 0.2,
+      Math.max(100, rightX - left - 12),
+      wg
+    );
     for (let i = 0; i < leftLines.length; i++) {
       ensurePageSpace();
-      context.page.drawText(leftLines[i], { x: left + 2, y, size: config.bodySize - 0.2, font: serifFont, color: mutedText });
-      if (i === 0 && rightText) context.page.drawText(rightText, { x: rightX, y, size: config.bodySize - 0.2, font: serifFont, color: mutedText });
+      drawTextWithWordGap(
+        context.page,
+        leftLines[i],
+        left + 2,
+        y,
+        config.bodySize - 0.2,
+        serifFont,
+        mutedText,
+        wg
+      );
+      if (i === 0 && rightText)
+        context.page.drawText(rightText, { x: rightX, y, size: config.bodySize - 0.2, font: serifFont, color: mutedText });
       y -= bodyLineHeight;
     }
   };
@@ -232,13 +310,16 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
         context.page.drawRectangle({ x: left, y: y - sectionLineHeight + 4, width: 3, height: sectionLineHeight + 8, color: accent });
       }
       const sectionLabelX = emeraldPlain ? left + 6 : left + 9;
-      context.page.drawText(sectionHeader.toUpperCase(), {
-        x: sectionLabelX,
-        y: y - 1,
-        size: config.sectionHeaderSize,
-        font: serifBoldFont,
-        color: accent,
-      });
+      drawTextWithWordGap(
+        context.page,
+        sectionHeader.toUpperCase(),
+        sectionLabelX,
+        y - 1,
+        config.sectionHeaderSize,
+        serifBoldFont,
+        accent,
+        wg
+      );
       y -= sectionLineHeight + 8;
       continue;
     }
@@ -250,10 +331,20 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
         const [, jobTitle, companyPart, period] = match;
         if (!firstJob) y -= 12;
         firstJob = false;
-        const titleLines = wrapText(jobTitle.trim(), serifBoldFont, config.bodySize + 0.9, contentWidth - 12);
+        const titleLines = wrapText(jobTitle.trim(), serifBoldFont, config.bodySize + 0.9, contentWidth - 12, wg);
         for (const titleLine of titleLines) {
           ensurePageSpace();
-          drawTextWithBold(context.page, titleLine, left + 2, y, serifFont, serifBoldFont, config.bodySize + 0.9, textDark);
+          drawTextWithBold(
+            context.page,
+            titleLine,
+            left + 2,
+            y,
+            serifFont,
+            serifBoldFont,
+            config.bodySize + 0.9,
+            textDark,
+            wg
+          );
           y -= bodyLineHeight;
         }
         const formattedPeriod = formatDate(period.trim());
@@ -288,6 +379,7 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
           institution: edu.institution,
           periodRaw: edu.period,
           degreeWrapSubtract: 10,
+          wordGapExtra: wg,
         });
         y -= 6;
         continue;
@@ -299,35 +391,53 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
     const isSkillsSection = currentSection === 'technical skills' || currentSection === 'skills';
     const isSkillsCategory = colonIndex !== -1 && (isSkillsSection || line.startsWith('·') || line.startsWith('•'));
     if (isSkillsCategory) {
-      const bulletWidth = serifFont.widthOfTextAtSize(PDF_BULLET + '   ', bulletMarkSize);
+      const bulletWidth = serifFont.widthOfTextAtSize(PDF_BULLET_DOT + '   ', bulletMarkSize);
       const categoryName = lineWithoutBullet.substring(0, colonIndex + 1).trim();
       const skillsText = lineWithoutBullet.substring(colonIndex + 1).trim();
       const categoryWidth = serifBoldFont.widthOfTextAtSize(categoryName, config.bodySize);
-      const wrappedSkills = wrapSkillsAfterCategory(skillsText, serifFont, config.bodySize, {
-        left,
-        bodyInsetLeft: 2,
-        contentWidth,
-        bodyInnerSubtract: 15,
-        bulletWidth,
-        categoryWidth,
-        spaceWidth: serifFont.widthOfTextAtSize(' ', config.bodySize),
-      });
+      const wrappedSkills = wrapSkillsAfterCategory(
+        skillsText,
+        serifFont,
+        config.bodySize,
+        {
+          left,
+          bodyInsetLeft: 2,
+          contentWidth,
+          bodyInnerSubtract: 15,
+          bulletWidth,
+          categoryWidth,
+          spaceWidth: serifFont.widthOfTextAtSize(' ', config.bodySize),
+        },
+        wg
+      );
       ensurePageSpace();
-      context.page.drawText(PDF_BULLET, { x: left + 2, y, size: bulletMarkSize, font: serifFont, color: textDark });
+      context.page.drawText(PDF_BULLET_DOT, { x: left + 2, y, size: bulletMarkSize, font: serifFont, color: textDark });
       context.page.drawText(categoryName, { x: left + 2 + bulletWidth, y, size: config.bodySize, font: serifBoldFont, color: accent });
       if (wrappedSkills[0]) {
-        context.page.drawText(wrappedSkills[0], {
-          x: left + 2 + bulletWidth + categoryWidth + serifFont.widthOfTextAtSize(' ', config.bodySize),
+        drawTextWithWordGap(
+          context.page,
+          wrappedSkills[0],
+          left + 2 + bulletWidth + categoryWidth + serifFont.widthOfTextAtSize(' ', config.bodySize),
           y,
-          size: config.bodySize,
-          font: serifFont,
-          color: textDark,
-        });
+          config.bodySize,
+          serifFont,
+          textDark,
+          wg
+        );
       }
       for (let i = 1; i < wrappedSkills.length; i++) {
         y -= bodyLineHeight;
         ensurePageSpace();
-        context.page.drawText(wrappedSkills[i], { x: left + 2 + bulletWidth, y, size: config.bodySize, font: serifFont, color: textDark });
+        drawTextWithWordGap(
+          context.page,
+          wrappedSkills[i],
+          left + 2 + bulletWidth,
+          y,
+          config.bodySize,
+          serifFont,
+          textDark,
+          wg
+        );
       }
       y -= bodyLineHeight + 2;
       continue;
@@ -336,10 +446,10 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
     const hasBullet = /^[\-\·•]\s/.test(line);
     const noAutoDotInSection =
       currentSection === 'summary' || currentSection === 'education';
-    const textToWrap = hasBullet ? line : noAutoDotInSection ? line : `${PDF_BULLET}   ${line}`;
+    const textToWrap = hasBullet ? line : noAutoDotInSection ? line : `${PDF_BULLET_DOT}   ${line}`;
     const bulletIndent =
-      noAutoDotInSection && !hasBullet ? 0 : serifFont.widthOfTextAtSize(PDF_BULLET + '   ', bulletMarkSize);
-    const wrapped = wrapTextWithIndent(textToWrap, serifFont, config.bodySize, contentWidth - 15);
+      noAutoDotInSection && !hasBullet ? 0 : serifFont.widthOfTextAtSize(PDF_BULLET_DOT + '   ', bulletMarkSize);
+    const wrapped = wrapTextWithIndent(textToWrap, serifFont, config.bodySize, contentWidth - 15, wg);
     let contentStartX = left + 2 + bulletIndent;
     for (let i = 0; i < wrapped.lines.length; i++) {
       ensurePageSpace();
@@ -350,12 +460,12 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
           const [, bulletChar, content] = bulletMatch;
           context.page.drawText(bulletChar, { x: left + 2, y, size: bulletMarkSize, font: serifFont, color: accent });
           contentStartX = left + 2 + serifFont.widthOfTextAtSize(bulletChar + '   ', bulletMarkSize);
-          drawTextWithBold(context.page, content, contentStartX, y, serifFont, serifBoldFont, config.bodySize, textDark);
+          drawTextWithBold(context.page, content, contentStartX, y, serifFont, serifBoldFont, config.bodySize, textDark, wg);
         } else {
-          drawTextWithBold(context.page, lineText, left + 2, y, serifFont, serifBoldFont, config.bodySize, textDark);
+          drawTextWithBold(context.page, lineText, left + 2, y, serifFont, serifBoldFont, config.bodySize, textDark, wg);
         }
       } else {
-        drawTextWithBold(context.page, lineText, contentStartX, y, serifFont, serifBoldFont, config.bodySize, textDark);
+        drawTextWithBold(context.page, lineText, contentStartX, y, serifFont, serifBoldFont, config.bodySize, textDark, wg);
       }
       y -= bodyLineHeight;
     }

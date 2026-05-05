@@ -2,14 +2,19 @@ import { StandardFonts, rgb, PDFPage, PDFFont, RGB } from 'pdf-lib';
 import {
   TemplateContext,
   drawTextWithBold,
+  drawTextWithWordGap,
   formatDate,
+  measureLineWidthWithWordGap,
+  PDF_BULLET_DOT,
+  RESUME_TEMPLATES_11_15_WORD_GAP_PT,
   wrapSkillsAfterCategory,
   wrapText,
   wrapTextWithIndent,
-  PDF_BULLET,
   parseEducationThreePartLine,
   drawEducationTwoRows,
 } from '../utils';
+
+const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT;
 
 function parseExperienceLine(line: string): { title: string; company: string; period: string } | null {
   const match = line.match(/^(.+?) at (.+?):\s*(.+)$/);
@@ -26,16 +31,26 @@ function splitWords(text: string): string[] {
 }
 
 /** Draw words with extra horizontal space distributed between word gaps so the line spans targetWidth (PDF-lib has no text-align: justify). */
-function drawJustifiedWords(page: PDFPage, words: string[], font: PDFFont, size: number, x: number, y: number, targetWidth: number, color: RGB) {
+function drawJustifiedWords(
+  page: PDFPage,
+  words: string[],
+  font: PDFFont,
+  size: number,
+  x: number,
+  y: number,
+  targetWidth: number,
+  color: RGB,
+  baseWordGap: number = 0
+) {
   if (words.length === 0) return;
   if (words.length === 1) {
     page.drawText(words[0], { x, y, size, font, color });
     return;
   }
-  const natural = words.reduce((acc, w, i) => {
-    const part = i === 0 ? w : ` ${w}`;
-    return acc + font.widthOfTextAtSize(part, size);
-  }, 0);
+  const spaceW = font.widthOfTextAtSize(' ', size);
+  const natural =
+    words.reduce((acc, w) => acc + font.widthOfTextAtSize(w, size), 0) +
+    (words.length - 1) * (spaceW + baseWordGap);
   const gaps = words.length - 1;
   const extraPerGap = natural < targetWidth ? (targetWidth - natural) / gaps : 0;
   let cx = x;
@@ -43,7 +58,7 @@ function drawJustifiedWords(page: PDFPage, words: string[], font: PDFFont, size:
     page.drawText(words[i], { x: cx, y, size, font, color });
     cx += font.widthOfTextAtSize(words[i], size);
     if (i < words.length - 1) {
-      cx += font.widthOfTextAtSize(' ', size) + extraPerGap;
+      cx += spaceW + extraPerGap + baseWordGap;
     }
   }
 }
@@ -74,12 +89,13 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
 
   let y = PAGE_HEIGHT - PAGE_MARGIN - 8;
 
+  const nameSize = 22.7;
   if (name) {
     const displayName = name.trim();
-    const nameLines = wrapText(displayName, fontBold, 22, contentWidth);
+    const nameLines = wrapText(displayName, fontBold, nameSize, contentWidth, WG);
     for (const nLine of nameLines) {
-      context.page.drawText(nLine, { x: contentX, y, size: 22, font: fontBold, color: INK });
-      y -= 24;
+      drawTextWithWordGap(context.page, nLine, contentX, y, nameSize, fontBold, INK, WG);
+      y -= 24.6;
     }
   }
 
@@ -90,10 +106,10 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
     .trim();
 
   if (cleanedHeadline) {
-    const headlineLines = wrapText(cleanedHeadline, font, 10.2, contentWidth);
+    const headlineLines = wrapText(cleanedHeadline, font, 10.55, contentWidth, WG);
     for (const line of headlineLines) {
-      context.page.drawText(line, { x: contentX, y, size: 10.2, font, color: MUTED });
-      y -= 12.2;
+      drawTextWithWordGap(context.page, line, contentX, y, 10.55, font, MUTED, WG);
+      y -= 12.65;
     }
   }
 
@@ -101,10 +117,10 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
   if (contacts.length > 0) {
     y -= 2;
     const contactLine = contacts.join('  ·  ');
-    const contactLines = wrapText(contactLine, font, 9, contentWidth);
+    const contactLines = wrapText(contactLine, font, 9.35, contentWidth, WG);
     for (const line of contactLines) {
-      context.page.drawText(line, { x: contentX, y, size: 9, font, color: MUTED });
-      y -= 11;
+      drawTextWithWordGap(context.page, line, contentX, y, 9.35, font, MUTED, WG);
+      y -= 11.45;
     }
   }
 
@@ -118,9 +134,8 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
   y -= 20;
 
   let currentSection = '';
-  const lineHeight = 13.2;
-  const bodySize = 9.8;
-  const bodySmall = 8.85;
+  const lineHeight = 13.65;
+  const bodySize = 10.15;
   /** Extra vertical gap before a new bullet/category row after another bullet/category in skills or experience. */
   const BULLET_PARAGRAPH_GAP = 5;
   let pendingBulletParagraphGap = false;
@@ -140,7 +155,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
     const text = label.trim();
     const upper = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
     const prefix = `${upper}  `;
-    const sectionHeaderSize = 11;
+    const sectionHeaderSize = 11.36;
     const prefixW = fontBold.widthOfTextAtSize(prefix, sectionHeaderSize);
     ensurePageSpace();
     context.page.drawText(prefix, { x: contentX, y, size: sectionHeaderSize, font: fontBold, color: INK });
@@ -180,16 +195,16 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
       pendingBulletParagraphGap = false;
       ensurePageSpace();
 
-      const titleLines = wrapText(exp.title, fontBold, 10.4, contentWidth);
+      const titleLines = wrapText(exp.title, fontBold, 10.75, contentWidth, WG);
       for (const tLine of titleLines) {
-        drawTextWithBold(context.page, tLine, contentX, y, font, fontBold, 10.4, INK);
+        drawTextWithBold(context.page, tLine, contentX, y, font, fontBold, 10.75, INK, WG);
         y -= lineHeight;
         ensurePageSpace();
       }
 
       const minGap = 10;
       const periodW = font.widthOfTextAtSize(exp.period, bodySize);
-      const companyLines = wrapText(exp.company.trim(), font, bodySize, contentWidth);
+      const companyLines = wrapText(exp.company.trim(), font, bodySize, contentWidth, WG);
 
       ensurePageSpace();
       if (companyLines.length === 0) {
@@ -207,11 +222,11 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
           const isLast = i === companyLines.length - 1;
           const lineText = companyLines[i];
           if (isLast) {
-            const lineW = font.widthOfTextAtSize(lineText, bodySize);
+            const lineW = measureLineWidthWithWordGap(lineText, font, bodySize, WG);
             if (lineW + minGap + periodW <= contentWidth) {
               const justifyTarget = contentWidth - periodW - minGap;
               const words = splitWords(lineText);
-              drawJustifiedWords(context.page, words, font, bodySize, contentX, y, justifyTarget, MUTED);
+              drawJustifiedWords(context.page, words, font, bodySize, contentX, y, justifyTarget, MUTED, WG);
               context.page.drawText(exp.period, {
                 x: contentX + contentWidth - periodW,
                 y,
@@ -220,7 +235,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
                 color: MUTED,
               });
             } else {
-              context.page.drawText(lineText, { x: contentX, y, size: bodySize, font, color: MUTED });
+              drawTextWithWordGap(context.page, lineText, contentX, y, bodySize, font, MUTED, WG);
               y -= lineHeight;
               ensurePageSpace();
               context.page.drawText(exp.period, {
@@ -232,7 +247,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
               });
             }
           } else {
-            context.page.drawText(lineText, { x: contentX, y, size: bodySize, font, color: MUTED });
+            drawTextWithWordGap(context.page, lineText, contentX, y, bodySize, font, MUTED, WG);
           }
           y -= lineHeight;
         }
@@ -255,7 +270,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
           bodyLineHeight: lineHeight,
           font,
           fontBold,
-          degreeSize: 10.1,
+          degreeSize: 10.45,
           metaSize: bodySize - 0.2,
           degreeColor: INK,
           mutedColor: MUTED,
@@ -263,6 +278,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
           institution: edu.institution,
           periodRaw: edu.period,
           degreeWrapSubtract: 10,
+          wordGapExtra: WG,
         });
         y -= 3;
         continue;
@@ -283,40 +299,43 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
       }
       const category = cleaned.substring(0, colonIndex + 1).trim();
       const skills = cleaned.substring(colonIndex + 1).trim();
-      const bulletWidth = font.widthOfTextAtSize('-  ', bodySize);
+      const bulletWidth = font.widthOfTextAtSize(PDF_BULLET_DOT + '  ', bodySize);
       const categoryWidth = fontBold.widthOfTextAtSize(category, bodySize);
-      const wrappedSkills = wrapSkillsAfterCategory(skills, font, bodySize, {
-        left: contentX,
-        bodyInsetLeft: 0,
-        contentWidth,
-        bodyInnerSubtract: 10,
-        bulletWidth,
-        categoryWidth,
-        spaceWidth: font.widthOfTextAtSize(' ', bodySize),
-      });
+      const wrappedSkills = wrapSkillsAfterCategory(
+        skills,
+        font,
+        bodySize,
+        {
+          left: contentX,
+          bodyInsetLeft: 0,
+          contentWidth,
+          bodyInnerSubtract: 10,
+          bulletWidth,
+          categoryWidth,
+          spaceWidth: font.widthOfTextAtSize(' ', bodySize),
+        },
+        WG
+      );
 
       ensurePageSpace();
-      context.page.drawText('-', { x: contentX, y, size: bodySize, font, color: SPINE_COLOR });
+      context.page.drawText(PDF_BULLET_DOT, { x: contentX, y, size: bodySize, font, color: SPINE_COLOR });
       context.page.drawText(category, { x: contentX + bulletWidth, y, size: bodySize, font: fontBold, color: INK });
       if (wrappedSkills[0]) {
-        context.page.drawText(wrappedSkills[0], {
-          x: contentX + bulletWidth + categoryWidth + font.widthOfTextAtSize(' ', bodySize),
+        drawTextWithWordGap(
+          context.page,
+          wrappedSkills[0],
+          contentX + bulletWidth + categoryWidth + font.widthOfTextAtSize(' ', bodySize),
           y,
-          size: bodySize,
+          bodySize,
           font,
-          color: INK,
-        });
+          INK,
+          WG
+        );
       }
       for (let i = 1; i < wrappedSkills.length; i++) {
         y -= lineHeight;
         ensurePageSpace();
-        context.page.drawText(wrappedSkills[i], {
-          x: contentX + bulletWidth,
-          y,
-          size: bodySize,
-          font,
-          color: INK,
-        });
+        drawTextWithWordGap(context.page, wrappedSkills[i], contentX + bulletWidth, y, bodySize, font, INK, WG);
       }
       y -= 13;
       if (sectionIsSkills()) pendingBulletParagraphGap = true;
@@ -328,22 +347,22 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
       if ((sectionIsExperience() || sectionIsSkills()) && pendingBulletParagraphGap) {
         y -= BULLET_PARAGRAPH_GAP;
       }
-      const wrapped = wrapTextWithIndent(line, font, bodySize, contentWidth - 12);
+      const wrapped = wrapTextWithIndent(line, font, bodySize, contentWidth - 12, WG);
       const dashX = contentX;
-      const textX = contentX + font.widthOfTextAtSize('-  ', bodySize);
+      const textX = contentX + font.widthOfTextAtSize(PDF_BULLET_DOT + '  ', bodySize);
       for (let i = 0; i < wrapped.lines.length; i++) {
         ensurePageSpace();
         const segment = wrapped.lines[i];
         if (i === 0) {
           const bulletMatch = segment.match(/^([\-\·•])\s*(.*)/);
-          context.page.drawText('-', { x: dashX, y, size: bodySize, font, color: SPINE_COLOR });
+          context.page.drawText(PDF_BULLET_DOT, { x: dashX, y, size: bodySize, font, color: SPINE_COLOR });
           if (bulletMatch) {
-            drawTextWithBold(context.page, bulletMatch[2], textX, y, font, fontBold, bodySize, INK);
+            drawTextWithBold(context.page, bulletMatch[2], textX, y, font, fontBold, bodySize, INK, WG);
           } else {
-            drawTextWithBold(context.page, segment, textX, y, font, fontBold, bodySize, INK);
+            drawTextWithBold(context.page, segment, textX, y, font, fontBold, bodySize, INK, WG);
           }
         } else {
-          drawTextWithBold(context.page, segment, textX, y, font, fontBold, bodySize, INK);
+          drawTextWithBold(context.page, segment, textX, y, font, fontBold, bodySize, INK, WG);
         }
         y -= lineHeight;
       }
@@ -353,10 +372,10 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
     }
 
     if (sectionIsExperience() || sectionIsSkills()) pendingBulletParagraphGap = false;
-    const wrapped = wrapText(line, font, bodySize, contentWidth);
+    const wrapped = wrapText(line, font, bodySize, contentWidth, WG);
     for (const segment of wrapped) {
       ensurePageSpace();
-      drawTextWithBold(context.page, segment, contentX, y, font, fontBold, bodySize, INK);
+      drawTextWithBold(context.page, segment, contentX, y, font, fontBold, bodySize, INK, WG);
       y -= lineHeight;
     }
   }

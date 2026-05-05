@@ -2,11 +2,17 @@ import { StandardFonts, rgb } from 'pdf-lib';
 import {
   TemplateContext,
   drawTextWithBold,
+  drawTextWithWordGap,
   formatDate,
+  measureLineWidthWithWordGap,
+  RESUME_TEMPLATES_11_15_WORD_GAP_PT,
   wrapText,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  PDF_BULLET_DOT,
 } from '../utils';
+
+const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT;
 
 type Sections = {
   summary: string[];
@@ -60,9 +66,13 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
   const LEFT_X = MARGIN;
   const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
   const BOTTOM = 50;
-  const bodyLineHeight = 14.4;
-  const sectionHeaderSize = 9.6;
-  const bodySize = 9.7;
+  const bodyLineHeight = 14.9;
+  const sectionHeaderSize = 9.95;
+  const bodySize = 10.05;
+  const nameSize = 23.6;
+  const headlineSize = 10.95;
+  const contactSize = 9.4;
+  const metaSize = 9.45;
 
   const sections = splitSections(body);
 
@@ -71,16 +81,16 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
   let headerY = PAGE_HEIGHT - 48;
   if (name) {
     const up = name.toUpperCase();
-    const nameWidth = fontBold.widthOfTextAtSize(up, 23);
-    page.drawText(up, { x: (PAGE_WIDTH - nameWidth) / 2, y: headerY, size: 23, font: fontBold, color: INK });
-    headerY -= 20;
+    const nameWidth = measureLineWidthWithWordGap(up, fontBold, nameSize, WG);
+    drawTextWithWordGap(page, up, (PAGE_WIDTH - nameWidth) / 2, headerY, nameSize, fontBold, INK, WG);
+    headerY -= 20.5;
   }
   if (headline) {
-    const headlineLines = wrapText(headline, font, 10.6, CONTENT_WIDTH * 0.86);
+    const headlineLines = wrapText(headline, font, headlineSize, CONTENT_WIDTH * 0.86, WG);
     for (const line of headlineLines) {
-      const width = font.widthOfTextAtSize(line, 10.6);
-      page.drawText(line, { x: (PAGE_WIDTH - width) / 2, y: headerY, size: 10.6, font, color: MUTED });
-      headerY -= 5;
+      const width = measureLineWidthWithWordGap(line, font, headlineSize, WG);
+      drawTextWithWordGap(page, line, (PAGE_WIDTH - width) / 2, headerY, headlineSize, font, MUTED, WG);
+      headerY -= 5.2;
     }
   }
 
@@ -88,8 +98,17 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
   let contentStartY = PAGE_HEIGHT - 146;
   if (contactLine) {
     const contactY = headerY - 12;
-    const contactWidth = font.widthOfTextAtSize(contactLine, 9.1);
-    page.drawText(contactLine, { x: (PAGE_WIDTH - contactWidth) / 2, y: contactY, size: 9.1, font, color: MUTED });
+    const contactWidth = measureLineWidthWithWordGap(contactLine, font, contactSize, WG);
+    drawTextWithWordGap(
+      page,
+      contactLine,
+      (PAGE_WIDTH - contactWidth) / 2,
+      contactY,
+      contactSize,
+      font,
+      MUTED,
+      WG
+    );
     contentStartY = contactY - 30;
   }
 
@@ -104,9 +123,9 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
     if (lines.length === 0) return;
     ensurePage();
     const label = `${title}`;
-    const labelWidth = fontBold.widthOfTextAtSize(label, sectionHeaderSize);
+    const labelWidth = measureLineWidthWithWordGap(label, fontBold, sectionHeaderSize, WG);
     const labelX = LEFT_X + (CONTENT_WIDTH - labelWidth) / 2;
-    context.page.drawText(label, { x: labelX, y: y, size: sectionHeaderSize, font: fontBold, color: ACCENT });
+    drawTextWithWordGap(context.page, label, labelX, y, sectionHeaderSize, fontBold, ACCENT, WG);
     const lineY = y - 5;
     context.page.drawLine({
       start: { x: LEFT_X, y: lineY },
@@ -143,13 +162,14 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
             font,
             fontBold,
             degreeSize: bodySize + 0.6,
-            metaSize: 9.1,
+            metaSize,
             degreeColor: INK,
             mutedColor: MUTED,
             degree: edu.degree,
             institution: edu.institution,
             periodRaw: edu.period,
             degreeWrapSubtract: 12,
+            wordGapExtra: WG,
           });
           y -= 5;
           continue;
@@ -164,13 +184,13 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
             ensurePage();
           }
           const [, titleText, company, period] = match;
-          drawTextWithBold(context.page, titleText, LEFT_X + 4, y, font, fontBold, bodySize + 0.8, INK);
+          drawTextWithBold(context.page, titleText, LEFT_X + 4, y, font, fontBold, bodySize + 0.8, INK, WG);
           y -= bodyLineHeight;
           const meta = `${company} | ${formatDate(period.trim())}`;
-          const metaLines = wrapText(meta, font, 9.1, CONTENT_WIDTH - 8);
+          const metaLines = wrapText(meta, font, metaSize, CONTENT_WIDTH - 8, WG);
           for (const metaLine of metaLines) {
             ensurePage();
-            context.page.drawText(metaLine, { x: LEFT_X + 4, y, size: 9.1, font, color: MUTED });
+            drawTextWithWordGap(context.page, metaLine, LEFT_X + 4, y, metaSize, font, MUTED, WG);
             y -= bodyLineHeight;
           }
           y -= 5;
@@ -182,14 +202,14 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
       }
 
       const plain = line.replace(/^[•·-]\s*/, '').trim();
-      const wrapped = wrapText(plain, font, bodySize, CONTENT_WIDTH - 18);
+      const wrapped = wrapText(plain, font, bodySize, CONTENT_WIDTH - 18, WG);
       for (let i = 0; i < wrapped.length; i++) {
         ensurePage();
         if (!noBulletSection && i === 0) {
-          context.page.drawText('•', { x: LEFT_X + 4, y, size: bodySize, font, color: ACCENT });
+          context.page.drawText(PDF_BULLET_DOT, { x: LEFT_X + 4, y, size: bodySize, font, color: ACCENT });
         }
         const textX = noBulletSection ? LEFT_X + 4 : LEFT_X + 15;
-        context.page.drawText(wrapped[i], { x: textX, y, size: bodySize, font, color: INK });
+        drawTextWithWordGap(context.page, wrapped[i], textX, y, bodySize, font, INK, WG);
         y -= bodyLineHeight;
       }
       y -= 1.2;

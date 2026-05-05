@@ -148,6 +148,9 @@ Return ONLY a Markdown resume in a single \`\`\`markdown code block.
 ## SUMMARY
 
 - EXACTLY 5 sentences
+- Output MUST be a single paragraph (no line breaks)
+- Do NOT use bullets, numbering, or list formatting in the output
+- Sentences must be separated only by periods and spaces
 - Align with HEADLINE + DOMAIN
 - Include:
   - experience
@@ -216,7 +219,7 @@ Each bullet:
 
 - No repeated verbs >2 times per role
 - Natural language
-- Present (current), past (previous)
+- MUST USE PAST TENSE for each bullet
 
 ---
 
@@ -252,6 +255,75 @@ Education:
 - No extra text
 - No missing sections
 - Clean formatting
+
+## FORMAT INVARIANCE RULES (CRITICAL)
+
+You MUST preserve technical correctness, symbols, punctuation, and formatting exactly as specified below.
+
+---
+
+## 1. SYMBOL LOCK (DO NOT MODIFY)
+
+Always preserve these EXACT forms:
+
+- CI/CD (never CI CD)
+- 30% (never 30 percent)
+- R&D (never R and D)
+- Node.js (never Node js)
+- C++ (never C plus plus)
+- API Gateway (unchanged)
+
+---
+
+## 2. PUNCTUATION RULES (STRICT)
+
+- Each bullet MUST be a complete sentence
+- Use commas to separate multiple actions or clauses
+- Do NOT remove commas for simplification
+- Each bullet MUST end with a period (.)
+
+---
+
+## 3. WORD COUNT RULE (HARD CONSTRAINT)
+
+- Each bullet MUST be EXACTLY 20 words
+- Period is NOT counted as a word
+- Do NOT approximate or exceed limit
+
+---
+
+## 4. SENTENCE STRUCTURE
+
+Each bullet MUST follow:
+
+Action + Technology + System + Detail + Business Impact
+
+- Commas are allowed and required for multi-action clarity
+- Do NOT flatten sentences into comma-less chains
+
+---
+
+## 5. ANTI-SIMPLIFICATION RULE
+
+Do NOT:
+- Replace symbols with words
+- Remove punctuation
+- Simplify technical terms
+- Reformat into plain English style
+- Change past tense
+---
+
+## 6. VALIDATION (MANDATORY)
+
+Before output, ensure:
+
+- All symbols are intact
+- Commas are present where multiple actions exist
+- Each bullet = exactly 20 words
+- Each sentence is grammatically valid
+
+If any rule fails:
+→ Rewrite before final output
 `.trim();
 
 export const DEFAULT_STAGE4_PROMPT_TEMPLATE = `
@@ -318,6 +390,9 @@ Education:
 - Clean formatting
 `.trim();
 
+export const QA_PROMPT_TEMPLATE =
+  'Answer the following questions based strictly on the provided Job Description and Resume. Each response must be 1–2 concise sentences, directly relevant, and grounded in the candidate’s experience. Avoid assumptions, filler, or repetition, and ensure answers are specific, professional, and fact-based.';
+
 const DEFAULT_TARGET_TITLE = 'Senior Software Engineer';
 
 export type Stage2Role = {
@@ -363,6 +438,50 @@ function experienceCountFromResumeText(resumeText: string): number {
   );
   const n = roleLike.length;
   return Math.min(Math.max(n || 1, 1), 20);
+}
+
+function normalizeTitle(title: string): string {
+  const t = title.trim();
+  if (!t) return 'Software Engineer';
+  if (/developer/i.test(t)) return t.replace(/developer/gi, 'Software Engineer');
+  if (/programmer\s*analyst/i.test(t)) return t.replace(/programmer\s*analyst/gi, 'Software Engineer');
+  return t;
+}
+
+function extractRoleTitlesFromProfile(profileData: string): string[] {
+  const lines = profileData.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const out: string[] = [];
+  for (const line of lines) {
+    const m = line.match(/^(.+?)\s+at\s+.+?:\s*(.+)$/i);
+    if (m && /(\d{4}|present|current)/i.test(m[2] ?? '')) {
+      out.push(m[1].trim());
+    }
+  }
+  return out;
+}
+
+export function buildFallbackStage1Output(profileData: string, targetTitle?: string): Stage1Output {
+  const fallbackHeadline =
+    targetTitle != null && String(targetTitle).trim() !== ''
+      ? String(targetTitle).trim()
+      : DEFAULT_TARGET_TITLE;
+
+  const roleTitles = extractRoleTitlesFromProfile(profileData);
+  const roles = (roleTitles.length ? roleTitles : ['Software Engineer']).map((title) => {
+    const normalized = normalizeTitle(title);
+    return {
+      original_title: title,
+      normalized_title: normalized,
+      adapted_title: normalized,
+    };
+  });
+
+  return {
+    domain: 'Software',
+    headline: fallbackHeadline,
+    seniority: 'Senior',
+    roles,
+  };
 }
 
 function substituteLiteral(haystack: string, needle: string, value: string): string {

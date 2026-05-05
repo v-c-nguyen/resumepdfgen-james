@@ -308,15 +308,110 @@ export function parseEducationThreePartLine(rawLine: string): { degree: string; 
   return { degree: m[1].trim(), institution: m[2].trim(), period: m[3].trim() };
 }
 
+/** Extra distance (pt) between word boundaries when rendering templates 10–15 (wider inter-word spacing). */
+export const RESUME_TEMPLATES_11_15_WORD_GAP_PT = 0.42;
+
+/** Width of a line when spaces between tokens receive `extraWordGap` (must match `drawTextWithWordGap`). */
+export function measureLineWidthWithWordGap(
+  text: string,
+  font: PDFFont,
+  size: number,
+  extraWordGap: number
+): number {
+  if (extraWordGap <= 0) return font.widthOfTextAtSize(text, size);
+  const tokens = text.split(/(\s+)/);
+  let w = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (!t) continue;
+    if (/^\s+$/.test(t)) {
+      w += font.widthOfTextAtSize(t, size);
+      if (i > 0 && i < tokens.length - 1) w += extraWordGap;
+    } else {
+      w += font.widthOfTextAtSize(t, size);
+    }
+  }
+  return w;
+}
+
+/** Draw plain text with optional extra space between word runs (PDF has no `wordSpacing` in pdf-lib). */
+export function drawTextWithWordGap(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  font: PDFFont,
+  color: RGB,
+  extraWordGap: number
+): void {
+  if (extraWordGap <= 0) {
+    page.drawText(text, { x, y, size, font, color });
+    return;
+  }
+  const tokens = text.split(/(\s+)/);
+  let cx = x;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (!t) continue;
+    if (/^\s+$/.test(t)) {
+      cx += font.widthOfTextAtSize(t, size);
+      if (i > 0 && i < tokens.length - 1) cx += extraWordGap;
+    } else {
+      page.drawText(t, { x: cx, y, size, font, color });
+      cx += font.widthOfTextAtSize(t, size);
+    }
+  }
+}
+
+function drawSegmentWithWordGap(
+  page: PDFPage,
+  text: string,
+  startX: number,
+  y: number,
+  size: number,
+  font: PDFFont,
+  color: RGB,
+  extraWordGap: number
+): number {
+  if (extraWordGap <= 0) {
+    page.drawText(text, { x: startX, y, size, font, color });
+    return startX + font.widthOfTextAtSize(text, size);
+  }
+  const tokens = text.split(/(\s+)/);
+  let cx = startX;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (!t) continue;
+    if (/^\s+$/.test(t)) {
+      cx += font.widthOfTextAtSize(t, size);
+      if (i > 0 && i < tokens.length - 1) cx += extraWordGap;
+    } else {
+      page.drawText(t, { x: cx, y, size, font, color });
+      cx += font.widthOfTextAtSize(t, size);
+    }
+  }
+  return cx;
+}
+
 // Helper to wrap text within a max width
-export function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+export function wrapText(
+  text: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+  extraWordGap: number = 0
+): string[] {
   const safe = sanitizeForPdfText(text);
   const words = safe.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let currentLine = '';
   for (let i = 0; i < words.length; i++) {
     const testLine = currentLine ? currentLine + ' ' + words[i] : words[i];
-    const testWidth = font.widthOfTextAtSize(testLine, size);
+    const testWidth =
+      extraWordGap > 0
+        ? measureLineWidthWithWordGap(testLine, font, size, extraWordGap)
+        : font.widthOfTextAtSize(testLine, size);
     if (testWidth > maxWidth && currentLine) {
       lines.push(currentLine);
       currentLine = words[i];
@@ -343,6 +438,7 @@ export function wrapTextWithLineWidths(
   size: number,
   firstLineMaxWidth: number,
   continuationMaxWidth: number,
+  extraWordGap: number = 0,
   tolerancePt: number = PDF_SKILLS_WRAP_TOLERANCE_PT
 ): string[] {
   const safe = sanitizeForPdfText(text);
@@ -356,7 +452,10 @@ export function wrapTextWithLineWidths(
 
   for (const word of words) {
     const testLine = currentLine ? currentLine + ' ' + word : word;
-    const testWidth = font.widthOfTextAtSize(testLine, size);
+    const testWidth =
+      extraWordGap > 0
+        ? measureLineWidthWithWordGap(testLine, font, size, extraWordGap)
+        : font.widthOfTextAtSize(testLine, size);
     if (testWidth <= widthLimit(lineIndex) || !currentLine) {
       currentLine = testLine;
     } else {
@@ -382,7 +481,8 @@ export function wrapSkillsAfterCategory(
     bulletWidth: number;
     categoryWidth: number;
     spaceWidth: number;
-  }
+  },
+  extraWordGap: number = 0
 ): string[] {
   const {
     left,
@@ -404,7 +504,8 @@ export function wrapSkillsAfterCategory(
     font,
     bodySize,
     firstLineWidth,
-    continuationWidth
+    continuationWidth,
+    extraWordGap
   );
 }
 
@@ -413,7 +514,8 @@ export function wrapTextWithIndent(
   text: string,
   font: PDFFont,
   size: number,
-  maxWidth: number
+  maxWidth: number,
+  extraWordGap: number = 0
 ): { lines: string[]; prefix: string; indentWidth: number } {
   // Convert '-' to '•' (bullet) for consistency
   const normalizedText = text.replace(/^(-\s+)/, '• ');
@@ -427,7 +529,7 @@ export function wrapTextWithIndent(
   const prefixWidth = prefix ? font.widthOfTextAtSize(prefix, size) : 0;
   
   // Wrap the content part
-  const wrappedContent = wrapText(content, font, size, maxWidth - prefixWidth);
+  const wrappedContent = wrapText(content, font, size, maxWidth - prefixWidth, extraWordGap);
   
   // Build lines with prefix on first line only
   const lines: string[] = [];
@@ -455,7 +557,8 @@ export function drawTextWithBold(
   font: PDFFont,
   fontBold: PDFFont,
   size: number,
-  color: RGB
+  color: RGB,
+  wordGapExtra: number = 0
 ) {
   const safe = sanitizeForPdfText(text);
   const parts = safe.split(/(\*\*[^*]+\*\*)/g);
@@ -463,11 +566,9 @@ export function drawTextWithBold(
   for (const part of parts) {
     if (part.startsWith('**') && part.endsWith('**')) {
       const content = part.slice(2, -2);
-      page.drawText(content, { x: offsetX, y, size, font: fontBold, color });
-      offsetX += fontBold.widthOfTextAtSize(content, size);
+      offsetX = drawSegmentWithWordGap(page, content, offsetX, y, size, fontBold, color, wordGapExtra);
     } else {
-      page.drawText(part, { x: offsetX, y, size, font, color });
-      offsetX += font.widthOfTextAtSize(part, size);
+      offsetX = drawSegmentWithWordGap(page, part, offsetX, y, size, font, color, wordGapExtra);
     }
   }
 }
@@ -492,15 +593,18 @@ export type EducationTwoRowParams = {
   periodRaw: string;
   /** Subtracted from content width when wrapping the degree (default 10). */
   degreeWrapSubtract?: number;
+  /** Optional wider inter-word spacing (templates 10–15). */
+  wordGapExtra?: number;
 };
 
 export function drawEducationTwoRows(p: EducationTwoRowParams): number {
+  const wg = p.wordGapExtra ?? 0;
   let y = p.y;
   const dw = p.degreeWrapSubtract ?? 10;
-  const degreeLines = wrapText(p.degree, p.fontBold, p.degreeSize, p.contentWidth - dw);
+  const degreeLines = wrapText(p.degree, p.fontBold, p.degreeSize, p.contentWidth - dw, wg);
   for (const degreeLine of degreeLines) {
     p.ensurePageSpace();
-    drawTextWithBold(p.page, degreeLine, p.textLeft, y, p.font, p.fontBold, p.degreeSize, p.degreeColor);
+    drawTextWithBold(p.page, degreeLine, p.textLeft, y, p.font, p.fontBold, p.degreeSize, p.degreeColor, wg);
     y -= p.bodyLineHeight;
   }
 
@@ -509,16 +613,10 @@ export function drawEducationTwoRows(p: EducationTwoRowParams): number {
   const periodX = p.rightEdgeX - periodW;
   const gap = 12;
   const firstLineMax = Math.max(60, periodX - p.textLeft - gap);
-  const uniLines = wrapText(p.institution, p.font, p.metaSize, firstLineMax);
+  const uniLines = wrapText(p.institution, p.font, p.metaSize, firstLineMax, wg);
 
   p.ensurePageSpace();
-  p.page.drawText(uniLines[0] ?? '', {
-    x: p.textLeft,
-    y,
-    size: p.metaSize,
-    font: p.font,
-    color: p.mutedColor,
-  });
+  drawTextWithWordGap(p.page, uniLines[0] ?? '', p.textLeft, y, p.metaSize, p.font, p.mutedColor, wg);
   p.page.drawText(periodText, {
     x: periodX,
     y,
@@ -530,13 +628,7 @@ export function drawEducationTwoRows(p: EducationTwoRowParams): number {
 
   for (let i = 1; i < uniLines.length; i++) {
     p.ensurePageSpace();
-    p.page.drawText(uniLines[i], {
-      x: p.textLeft,
-      y,
-      size: p.metaSize,
-      font: p.font,
-      color: p.mutedColor,
-    });
+    drawTextWithWordGap(p.page, uniLines[i], p.textLeft, y, p.metaSize, p.font, p.mutedColor, wg);
     y -= p.bodyLineHeight;
   }
 
@@ -545,6 +637,9 @@ export function drawEducationTwoRows(p: EducationTwoRowParams): number {
 
 /** WinAnsi-safe bullet for PDF (middle dot ·). Use instead of Unicode • to avoid encoding errors. */
 export const PDF_BULLET = '\u00B7';
+
+/** Disc bullet (•) for templates 10–15 skills/experience list markers. */
+export const PDF_BULLET_DOT = '\u2022';
 
 /** Slight size multiplier to make bullets visually a bit larger than body text. */
 export const PDF_BULLET_SIZE_MULTIPLIER = 1.5;

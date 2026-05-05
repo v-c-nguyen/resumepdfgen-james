@@ -6,7 +6,7 @@ import { PDF_TEMPLATE_IDS } from '@/app/data/pdfTemplateIds';
 import {
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
-  DEFAULT_STAGE4_PROMPT_TEMPLATE,
+  QA_PROMPT_TEMPLATE,
 } from '@/app/utils/promptBuilder';
 
 interface ProfileEditorProps {
@@ -249,7 +249,6 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
   if (editingProfile) {
     const currentStage1Prompt = editingProfile.customStage1Prompt || DEFAULT_STAGE1_PROMPT_TEMPLATE;
     const currentStage3Prompt = editingProfile.customStage3Prompt || DEFAULT_STAGE3_PROMPT_TEMPLATE;
-    const currentStage4Prompt = editingProfile.customStage4Prompt || DEFAULT_STAGE4_PROMPT_TEMPLATE;
 
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
@@ -554,12 +553,11 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                 <code className="bg-blue-100 px-1 rounded">{"${jobDescription}"}</code> for the job description, and{' '}
                 <code className="bg-blue-100 px-1 rounded">{"${targetTitle}"}</code> for the target title from profile settings.
                 Stage 1 is classification + role plan (LLM output includes domain, headline, seniority, and roles).
-                Stage 3 also supports{' '}
+                Stage 2 also supports{' '}
                 <code className="bg-blue-100 px-1 rounded">{"${domain}"}</code>,{' '}
                 <code className="bg-blue-100 px-1 rounded">{"${headline}"}</code>,{' '}
                 <code className="bg-blue-100 px-1 rounded">{"${roles}"}</code>, and{' '}
-                <code className="bg-blue-100 px-1 rounded">{"${experienceCount}"}</code>. Stage 4 also supports{' '}
-                <code className="bg-blue-100 px-1 rounded">{"${contentJson}"}</code>.
+                <code className="bg-blue-100 px-1 rounded">{"${experienceCount}"}</code>.
               </p>
             </div>
             <div className="space-y-5">
@@ -610,14 +608,14 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">Stage 3 Prompt (markdown resume)</label>
+                  <label className="block text-sm font-medium text-gray-700">Stage 2 Prompt (markdown resume)</label>
                   <button
                     onClick={() => {
                       setEditingProfile({ ...editingProfile, customStage3Prompt: undefined });
                     }}
                     className="text-xs text-gray-600 hover:text-gray-800 underline"
                   >
-                    Reset Stage 3
+                    Reset Stage 2
                   </button>
                 </div>
                 <textarea
@@ -632,51 +630,30 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                   }}
                   rows={14}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
-                  placeholder="Enter custom Stage 3 prompt here..."
+                  placeholder="Enter custom Stage 2 prompt here..."
                 />
                 <p className="mt-2 text-xs text-gray-500">
                   {currentStage3Prompt.length} characters
                   {editingProfile.customStage3Prompt ? (
-                    <span className="ml-2 text-blue-600">• Stage 3 custom prompt is active</span>
+                    <span className="ml-2 text-blue-600">• Stage 2 custom prompt is active</span>
                   ) : (
-                    <span className="ml-2 text-gray-500">• Using default Stage 3 prompt</span>
+                    <span className="ml-2 text-gray-500">• Using default Stage 2 prompt</span>
                   )}
                 </p>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">Stage 4 Prompt</label>
-                  <button
-                    onClick={() => {
-                      setEditingProfile({ ...editingProfile, customStage4Prompt: undefined });
-                    }}
-                    className="text-xs text-gray-600 hover:text-gray-800 underline"
-                  >
-                    Reset Stage 4
-                  </button>
+                  <label className="block text-sm font-medium text-gray-700">QA Prompt</label>
                 </div>
                 <textarea
-                  value={currentStage4Prompt}
-                  onChange={(e) => {
-                    const newPrompt = e.target.value;
-                    if (newPrompt !== DEFAULT_STAGE4_PROMPT_TEMPLATE) {
-                      setEditingProfile({ ...editingProfile, customStage4Prompt: newPrompt });
-                    } else {
-                      setEditingProfile({ ...editingProfile, customStage4Prompt: undefined });
-                    }
-                  }}
-                  rows={14}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
-                  placeholder="Enter custom Stage 4 prompt here..."
+                  value={QA_PROMPT_TEMPLATE}
+                  readOnly
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-900"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  {currentStage4Prompt.length} characters
-                  {editingProfile.customStage4Prompt ? (
-                    <span className="ml-2 text-blue-600">• Stage 4 custom prompt is active</span>
-                  ) : (
-                    <span className="ml-2 text-gray-500">• Using default Stage 4 prompt</span>
-                  )}
+                  Shared QA prompt used by the main page &quot;Generate QA prompt&quot; button.
                 </p>
               </div>
             </div>
@@ -746,10 +723,7 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                       <p className="text-blue-600">✓ Stage 1 custom prompt configured</p>
                     )}
                     {profile.customStage3Prompt && (
-                      <p className="text-blue-600">✓ Stage 3 custom prompt configured</p>
-                    )}
-                    {profile.customStage4Prompt && (
-                      <p className="text-blue-600">✓ Stage 4 custom prompt configured</p>
+                      <p className="text-blue-600">✓ Stage 2 custom prompt configured</p>
                     )}
                     <p>PDF Template: {(() => {
                       const template = pdfTemplates.find(t => t.value === (profile.pdfTemplate || (pdfTemplates.length > 0 ? pdfTemplates[0].value : 1)));
