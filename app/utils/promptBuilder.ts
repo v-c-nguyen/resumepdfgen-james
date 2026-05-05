@@ -1,7 +1,12 @@
 ﻿export const DEFAULT_STAGE1_PROMPT_TEMPLATE = `
-You are a strict classifier and career trajectory planner.
+# STRICT ROLE CLASSIFIER + TRAJECTORY GENERATOR
 
-INPUT:
+Deterministic. No interpretation beyond rules.
+
+---
+
+## INPUT
+
 PROFILE:
 \${profileData}
 
@@ -10,10 +15,10 @@ JOB DESCRIPTION:
 
 ---
 
-OUTPUT JSON ONLY:
+## OUTPUT (JSON ONLY)
 
 {
-  "domain": "Software | DevOps | Data | ML | Cloud | Solutions",
+  "domain": "FullStack | AI Integration | Applied AI | AI/ML | Salesforce | Solutions | DevOps | Data | QA",
   "headline": "string",
   "seniority": "Junior | Mid | Senior",
   "roles": [
@@ -27,92 +32,138 @@ OUTPUT JSON ONLY:
 
 ---
 
-## PART A — CLASSIFICATION
+## 1. DOMAIN
 
-### Domain Detection
+Default → FullStack
 
-Default:
-? "Software"
+Switch ONLY if ≥3 matching signals in JOB DESCRIPTION:
 
-Switch ONLY if strong signals (=3):
-
-- DevOps ? CI/CD, Kubernetes, Terraform, infrastructure, pipelines
-- Data ? ETL, Spark, Airflow, warehousing, big data
-- ML ? models, training, NLP, inference
-- Cloud ? AWS/GCP/Azure-heavy infra
-- Solutions ? client-facing, pre-sales, integrations
-
----
-
-### Headline Rules
-
-- Default: "Senior Software Engineer"
-- If domain ? Software:
-  ? "Senior {Domain} Engineer"
-
-Examples:
-- DevOps ? Senior DevOps Engineer
-- Data ? Senior Data Engineer
+- AI Integration → LLM APIs, OpenAI, copilots, embeddings, RAG
+- Applied AI → agents, workflows, automation, orchestration
+- AI/ML → training, NLP, deep learning, ML pipelines
+- DevOps → CI/CD, Kubernetes, Terraform, infra, SRE
+- Data → ETL, Spark, Airflow, warehousing
+- Salesforce → Apex, Lightning, Salesforce
+- Solutions → client-facing, pre-sales, integrations
+- QA → testing, automation testing, Selenium, Cypress, Playwright, SDET, QA pipelines
 
 ---
 
-### Seniority
+## 2. HEADLINE (STRICT MAP)
 
-- =5 years ? Senior
-- 2–5 ? Mid
-- <2 ? Junior
+FullStack → Senior Software Engineer  
+AI Integration → Senior Software Engineer (AI Integration)  
+Applied AI → Senior Software Engineer (Applied AI & Full Stack)  
+AI/ML → Senior AI/ML Engineer  
+DevOps → Senior DevOps Engineer  
+Data → Senior Data Engineer  
+Salesforce → Salesforce Technical Architect  
+Solutions → Senior Solutions Engineer  
+QA → Senior QA Automation Engineer | SDET  
+---
+
+## 3. SENIORITY
+
+≥5 years → Senior  
+2–5 years → Mid  
+<2 years → Junior  
 
 ---
 
-## PART B — ROLE PLAN (uses DOMAIN + SENIORITY from Part A)
+## 4. NORMALIZATION
 
-Infer roles from PROFILE experience history (same order as in PROFILE).
+Apply to PROFILE roles:
 
-### Step 1: Normalize Titles
-
-- Developer ? Software Engineer
-- Programmer Analyst ? Software Engineer
-
----
-
-### Step 2: Apply Domain Adaptation
-
-If DOMAIN ? Software:
-
-- Software Engineer ? {Domain} Engineer
-- Senior Software Engineer ? Senior {Domain} Engineer
+- Developer → Software Engineer  
+- Programmer Analyst → Software Engineer  
+- Intern → Software Engineering Intern 
+- QA Tester → QA Tester  
+- QA Engineer → QA Engineer 
 
 ---
 
-### Step 3: Preserve Trajectory
+## 5. ROLE TEMPLATES (BASE ORDER = EARLIEST → LATEST)
 
-- Maintain seniority progression
-- Do NOT upgrade or downgrade roles
-- Earlier roles = later roles
+AI/ML:
+[Data Engineer, Machine Learning Engineer, Senior Machine Learning Engineer, Senior AI/ML Engineer]
+
+DevOps:
+[Software Engineer, Platform Engineer, Senior DevOps Engineer, Senior DevOps Engineer]
+
+Solutions:
+[Software Engineering Intern, Software Engineer, Senior Software Engineer, Senior Solutions Engineer]
+
+Salesforce:
+[Salesforce Developer/Admin, Salesforce Developer, Senior Salesforce Developer, Salesforce Technical Architect]
+
+Data:
+[Software Engineer, Backend Engineer, Data Engineer, Senior Data Engineer]
+
+QA:
+[QA Tester, QA Engineer, Senior QA Engineer, Senior QA Automation Engineer]
 
 ---
 
-### Step 4: Partial Transition
+## 6. ROLE ASSIGNMENT
 
-- Earlier roles MAY stay as Software Engineer
-- At least 70% should match DOMAIN if strong fit
+Let:
+- P = number of PROFILE roles
+- T = template (size = 4)
+
+### If domain ∈ {AI/ML, DevOps, Solutions, Salesforce, Data}:
+
+IF P ≤ 4:
+→ Use LAST P roles from template
+
+IF P > 4:
+→ Extend by repeating earliest roles:
+Example (P=6):
+[T1, T1, T2, T3, T4, T4]
 
 ---
 
-### Step 5: Safeguards
+### If domain = AI Integration:
 
+- Last role = **Senior Software Engineer (AI Integration)**
+- All previous roles = Keep previous roles
+
+---
+
+### If domain = Applied AI:
+
+- Last role = **Senior Software Engineer (Applied AI & Full Stack)**
+- All previous roles = Keep previous roles
+
+---
+
+### If domain = FullStack:
+
+- Adapted roles = Keep previous roles
+
+---
+
+## 7. HARD CONSTRAINTS
+
+- Preserve role count EXACTLY = PROFILE
+- Preserve reverse chronological order (latest → earliest)
+- First role must be most recent
+- Last role must be oldest
+- Apply template mapping in chronological order, then reverse before output
 - Do NOT introduce:
-  - Lead, Staff, Principal, Architect
-- Do NOT change unrelated roles
+  Lead, Staff, Principal, Architect  
+  (EXCEPTION: Salesforce template allows Architect)
+- Do NOT mix domains
+- No invented roles outside templates
 
 ---
 
-## STRICT
+## 8. OUTPUT RULES
 
-- One JSON object only: domain, headline, seniority, and roles together
-- Keep same number of roles as experience entries in PROFILE
+- JSON ONLY
 - No explanation
-- JSON only
+- No extra text
+- All fields required
+- Deterministic output
 `.trim();
 
 export const DEFAULT_STAGE3_PROMPT_TEMPLATE = `
