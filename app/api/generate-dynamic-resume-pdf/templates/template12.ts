@@ -40,7 +40,8 @@ function drawJustifiedWords(
   y: number,
   targetWidth: number,
   color: RGB,
-  baseWordGap: number = 0
+  baseWordGap: number = 0,
+  maxExtraPerGap: number = 1.1
 ) {
   if (words.length === 0) return;
   if (words.length === 1) {
@@ -52,7 +53,8 @@ function drawJustifiedWords(
     words.reduce((acc, w) => acc + font.widthOfTextAtSize(w, size), 0) +
     (words.length - 1) * (spaceW + baseWordGap);
   const gaps = words.length - 1;
-  const extraPerGap = natural < targetWidth ? (targetWidth - natural) / gaps : 0;
+  const rawExtraPerGap = natural < targetWidth ? (targetWidth - natural) / gaps : 0;
+  const extraPerGap = Math.min(rawExtraPerGap, maxExtraPerGap);
   let cx = x;
   for (let i = 0; i < words.length; i++) {
     page.drawText(words[i], { x: cx, y, size, font, color });
@@ -136,8 +138,12 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
   let currentSection = '';
   const lineHeight = 13.65;
   const bodySize = 10.15;
-  /** Extra vertical gap before a new bullet/category row after another bullet/category in skills or experience. */
-  const BULLET_PARAGRAPH_GAP = 5;
+  /** Extra vertical gap before a new bullet/category row after another bullet/category in skills. */
+  const SKILLS_BULLET_PARAGRAPH_GAP = 5;
+  /** Experience bullets should be tighter than skills. */
+  const EXPERIENCE_BULLET_PARAGRAPH_GAP = 2;
+  /** Add breathing room above each new role title/company block in experience. */
+  const EXPERIENCE_ROLE_TOP_GAP = 6;
   let pendingBulletParagraphGap = false;
 
   const sectionIsExperience = () =>
@@ -166,7 +172,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
       thickness: 0.65,
       color: RULE,
     });
-    y -= 16;
+    y -= 20;
   };
 
   const bodyLines = body.split('\n');
@@ -185,7 +191,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
       const section = (line.endsWith(':') ? line.slice(0, -1) : line).trim();
       currentSection = section.toLowerCase();
       pendingBulletParagraphGap = false;
-      y -= 6;
+      y -= 11;
       drawSectionHeader(section);
       continue;
     }
@@ -193,6 +199,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
     const exp = parseExperienceLine(line);
     if (exp) {
       pendingBulletParagraphGap = false;
+      y -= EXPERIENCE_ROLE_TOP_GAP;
       ensurePageSpace();
 
       const titleLines = wrapText(exp.title, fontBold, 10.75, contentWidth, WG);
@@ -224,9 +231,14 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
           if (isLast) {
             const lineW = measureLineWidthWithWordGap(lineText, font, bodySize, WG);
             if (lineW + minGap + periodW <= contentWidth) {
-              const justifyTarget = contentWidth - periodW - minGap;
               const words = splitWords(lineText);
-              drawJustifiedWords(context.page, words, font, bodySize, contentX, y, justifyTarget, MUTED, WG);
+              const justifyTarget = contentWidth - periodW - minGap;
+              const shouldJustify = words.length >= 6;
+              if (shouldJustify) {
+                drawJustifiedWords(context.page, words, font, bodySize, contentX, y, justifyTarget, MUTED, WG);
+              } else {
+                drawTextWithWordGap(context.page, lineText, contentX, y, bodySize, font, MUTED, WG);
+              }
               context.page.drawText(exp.period, {
                 x: contentX + contentWidth - periodW,
                 y,
@@ -295,7 +307,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
 
     if (isCategory) {
       if (sectionIsSkills() && pendingBulletParagraphGap) {
-        y -= BULLET_PARAGRAPH_GAP;
+        y -= SKILLS_BULLET_PARAGRAPH_GAP;
       }
       const category = cleaned.substring(0, colonIndex + 1).trim();
       const skills = cleaned.substring(colonIndex + 1).trim();
@@ -345,7 +357,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
     const hasBullet = /^[\-\·•]\s/.test(line);
     if (hasBullet) {
       if ((sectionIsExperience() || sectionIsSkills()) && pendingBulletParagraphGap) {
-        y -= BULLET_PARAGRAPH_GAP;
+        y -= sectionIsExperience() ? EXPERIENCE_BULLET_PARAGRAPH_GAP : SKILLS_BULLET_PARAGRAPH_GAP;
       }
       const wrapped = wrapTextWithIndent(line, font, bodySize, contentWidth - 12, WG);
       const dashX = contentX;

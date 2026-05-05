@@ -458,8 +458,17 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
         const bulletMatch = lineText.match(/^([\-\·•])\s*(.*)/);
         if (bulletMatch) {
           const [, bulletChar, content] = bulletMatch;
-          context.page.drawText(bulletChar, { x: left + 2, y, size: bulletMarkSize, font: serifFont, color: accent });
-          contentStartX = left + 2 + serifFont.widthOfTextAtSize(bulletChar + '   ', bulletMarkSize);
+          const isExperienceSection =
+            currentSection === 'experience' || currentSection === 'professional experience';
+          const renderedBulletChar = isExperienceSection ? PDF_BULLET_DOT : bulletChar;
+          context.page.drawText(renderedBulletChar, {
+            x: left + 2,
+            y,
+            size: bulletMarkSize,
+            font: serifFont,
+            color: accent,
+          });
+          contentStartX = left + 2 + serifFont.widthOfTextAtSize(renderedBulletChar + '   ', bulletMarkSize);
           drawTextWithBold(context.page, content, contentStartX, y, serifFont, serifBoldFont, config.bodySize, textDark, wg);
         } else {
           drawTextWithBold(context.page, lineText, left + 2, y, serifFont, serifBoldFont, config.bodySize, textDark, wg);

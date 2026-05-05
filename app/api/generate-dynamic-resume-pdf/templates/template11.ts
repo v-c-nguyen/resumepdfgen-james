@@ -49,10 +49,15 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
   const SECTION_RULE = rgb(0.79, 0.82, 0.87);
 
   context.page.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, color: PAPER });
-  drawTopRule(context, contentX, contentX + contentWidth, PAGE_HEIGHT - PAGE_MARGIN + 4);
+  const headerTopRuleY = PAGE_HEIGHT - PAGE_MARGIN + 4;
+  const headerBottomRuleY = PAGE_HEIGHT - PAGE_MARGIN - HEADER_HEIGHT + 25;
+  drawTopRule(context, contentX, contentX + contentWidth, headerTopRuleY);
 
-  let headerY = PAGE_HEIGHT - PAGE_MARGIN - 16;
-  const nameSize = 20.1;
+  // Keep header content inside top/bottom rules with consistent inner padding.
+  const headerTopPadding = 11;
+  const headerBottomPadding = 10;
+  let headerY = headerTopRuleY - headerTopPadding - 20;
+  const nameSize = 25.1;
   if (name) {
     const nameLines = wrapText(name.toUpperCase(), fontBold, nameSize, contentWidth * 0.62, WG);
     for (const line of nameLines) {
@@ -69,37 +74,36 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
   if (cleanedHeadline) {
     const headlineLines = wrapText(cleanedHeadline, font, 9.75, contentWidth * 0.64, WG);
     for (const line of headlineLines) {
+      if (headerY <= headerBottomRuleY + headerBottomPadding + 1) break;
       drawTextWithWordGap(context.page, line, contentX, headerY, 9.75, font, MUTED, WG);
       headerY -= 11.4;
     }
   }
 
   const contacts = [location, phone, email].filter(Boolean);
-  let contactY = PAGE_HEIGHT - PAGE_MARGIN - 6;
+  let contactY = headerTopRuleY - headerTopPadding - 8;
   if (contacts.length > 0) {
     const rightColWidth = contentWidth * 0.31;
-    const rightColX = contentX + contentWidth - rightColWidth;
     for (const part of contacts) {
       const lines = wrapText(part, font, 9.2, rightColWidth, WG);
       for (const line of lines) {
+        if (contactY <= headerBottomRuleY + headerBottomPadding + 1) break;
         const lineWidth = font.widthOfTextAtSize(line, 9.2);
         drawTextWithWordGap(context.page, line, contentX + contentWidth - lineWidth, contactY, 9.2, font, MUTED, WG);
         contactY -= 10.8;
       }
+      if (contactY <= headerBottomRuleY + headerBottomPadding + 1) break;
       contactY -= 2;
     }
-    context.page.drawLine({
-      start: { x: contentX, y: contactY + 4 },
-      end: { x: contentX + contentWidth, y: contactY + 4 },
-      thickness: 0.8,
-      color: SECTION_RULE,
-    });
   }
 
-  let y = contactY - 10;
+  drawTopRule(context, contentX, contentX + contentWidth, headerBottomRuleY);
+
+  let y = headerBottomRuleY - 10;
   let currentSection = '';
   let hasRenderedExperience = false;
-  const lineHeight = 13.15;
+  const lineHeight = 14.4;
+  const SKILLS_ROW_EXTRA_GAP = 1.2;
 
   const bodyLines = body.split('\n');
   const ensurePageSpace = () => {
@@ -124,7 +128,7 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
     if (isHeader) {
       const label = (line.endsWith(':') ? line.slice(0, -1) : line).trim();
       currentSection = label.toLowerCase();
-      y -= 9;
+      y -= currentSection === 'summary' ? 14 : 9;
       ensurePageSpace();
 
       drawTextWithWordGap(context.page, label.toUpperCase(), contentX, y, 10.35, fontBold, ACCENT, WG);
@@ -152,19 +156,20 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
         ensurePageSpace();
       }
 
-      const companyLines = wrapText(exp.company, font, 9.55, contentWidth * 0.66, WG);
-      const periodWidth = fontBold.widthOfTextAtSize(exp.period, 8.95);
+      const companyMetaSize = 9.55;
+      const companyLines = wrapText(exp.company, font, companyMetaSize, contentWidth * 0.66, WG);
+      const periodWidth = font.widthOfTextAtSize(exp.period, companyMetaSize);
       const periodX = contentX + contentWidth - periodWidth - 6;
 
       if (companyLines.length > 0) {
-        drawTextWithWordGap(context.page, companyLines[0], contentX, y, 9.55, font, MUTED, WG);
-        context.page.drawText(exp.period, { x: periodX, y, size: 8.95, font: fontBold, color: MUTED });
-        y -= 11.4;
+        drawTextWithWordGap(context.page, companyLines[0], contentX, y, companyMetaSize, font, MUTED, WG);
+        drawTextWithWordGap(context.page, exp.period, periodX, y, companyMetaSize, font, MUTED, WG);
+        y -= lineHeight;
       }
       for (let i = 1; i < companyLines.length; i++) {
         ensurePageSpace();
-        drawTextWithWordGap(context.page, companyLines[i], contentX, y, 9.55, font, MUTED, WG);
-        y -= 11;
+        drawTextWithWordGap(context.page, companyLines[i], contentX, y, companyMetaSize, font, MUTED, WG);
+        y -= lineHeight;
       }
       y -= 4;
       hasRenderedExperience = true;
@@ -244,17 +249,19 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
           WG
         );
       }
+      y -= SKILLS_ROW_EXTRA_GAP;
       for (let i = 1; i < wrappedSkills.length; i++) {
-        y -= lineHeight;
+        y -= lineHeight + SKILLS_ROW_EXTRA_GAP;
         ensurePageSpace();
         drawTextWithWordGap(context.page, wrappedSkills[i], contentX + bulletWidth, y, skillBody, font, INK, WG);
       }
-      y -= 14;
+      y -= 15;
       continue;
     }
 
     const hasBullet = /^[\-\·•]\s/.test(line);
     if (hasBullet) {
+      const inSkillsSection = currentSection === 'technical skills' || currentSection === 'skills';
       const wrapped = wrapTextWithIndent(line, font, 9.8, contentWidth - 8, WG);
       for (let i = 0; i < wrapped.lines.length; i++) {
         ensurePageSpace();
@@ -280,9 +287,9 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
         } else {
           drawTextWithBold(context.page, segment, contentX + 8, y, font, fontBold, 9.8, INK, WG);
         }
-        y -= lineHeight;
+        y -= lineHeight + (inSkillsSection ? SKILLS_ROW_EXTRA_GAP : 0);
       }
-      y -= 1;
+      y -= inSkillsSection ? 2 : 1;
       continue;
     }
 

@@ -7,6 +7,7 @@ import {
   measureLineWidthWithWordGap,
   RESUME_TEMPLATES_11_15_WORD_GAP_PT,
   wrapText,
+  wrapTextWithLineWidths,
   parseEducationThreePartLine,
   drawEducationTwoRows,
   PDF_BULLET_DOT,
@@ -202,14 +203,48 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
       }
 
       const plain = line.replace(/^[•·-]\s*/, '').trim();
-      const wrapped = wrapText(plain, font, bodySize, CONTENT_WIDTH - 18, WG);
+      const isSkillsCategoryLine = title === 'SKILLS' && /^[^:]+:\s*.+$/.test(plain);
+      const wrapped = isSkillsCategoryLine
+        ? (() => {
+            const colonIdx = plain.indexOf(':');
+            const categoryLabel = plain.slice(0, colonIdx).trim();
+            const categoryWithColon = `${categoryLabel}:`;
+            const skillsText = plain.slice(colonIdx + 1).trim();
+            const categoryWidth = measureLineWidthWithWordGap(categoryWithColon, fontBold, bodySize, WG);
+            const firstLineMaxWidth = Math.max(30, CONTENT_WIDTH - 18 - categoryWidth - 5);
+            const continuationMaxWidth = CONTENT_WIDTH - 18;
+            const skillLines = wrapTextWithLineWidths(
+              skillsText,
+              font,
+              bodySize,
+              firstLineMaxWidth,
+              continuationMaxWidth,
+              WG
+            );
+            return skillLines.length > 0 ? skillLines : [''];
+          })()
+        : wrapText(plain, font, bodySize, CONTENT_WIDTH - 18, WG);
       for (let i = 0; i < wrapped.length; i++) {
         ensurePage();
         if (!noBulletSection && i === 0) {
           context.page.drawText(PDF_BULLET_DOT, { x: LEFT_X + 4, y, size: bodySize, font, color: ACCENT });
         }
         const textX = noBulletSection ? LEFT_X + 4 : LEFT_X + 15;
-        drawTextWithWordGap(context.page, wrapped[i], textX, y, bodySize, font, INK, WG);
+        if (isSkillsCategoryLine) {
+          const colonIdx = plain.indexOf(':');
+          const categoryLabel = plain.slice(0, colonIdx).trim();
+          const categoryWithColon = `${categoryLabel}:`;
+          if (i === 0) {
+            drawTextWithWordGap(context.page, categoryWithColon, textX, y, bodySize, fontBold, INK, WG);
+            const categoryWidth = measureLineWidthWithWordGap(categoryWithColon, fontBold, bodySize, WG);
+            const firstLine = wrapped[i] ? ` ${wrapped[i]}` : '';
+            drawTextWithWordGap(context.page, firstLine, textX + categoryWidth, y, bodySize, font, INK, WG);
+          } else {
+            drawTextWithWordGap(context.page, wrapped[i], textX, y, bodySize, font, INK, WG);
+          }
+        } else {
+          drawTextWithWordGap(context.page, wrapped[i], textX, y, bodySize, font, INK, WG);
+        }
         y -= bodyLineHeight;
       }
       y -= 1.2;
