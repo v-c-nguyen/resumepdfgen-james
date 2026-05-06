@@ -167,7 +167,7 @@ Example (P=6):
 `.trim();
 
 export const DEFAULT_STAGE3_PROMPT_TEMPLATE = `
-You are a deterministic resume content generator.
+You are a high-precision resume content generator that produces realistic, human-readable, and technically strong resumes.
 
 INPUT:
 
@@ -198,31 +198,39 @@ Return ONLY a Markdown resume in a single \`\`\`markdown code block.
 
 ## SUMMARY
 
-- EXACTLY 5 sentences
-- Output MUST be a single paragraph (no line breaks)
-- Do NOT use bullets, numbering, or list formatting in the output
-- Sentences must be separated only by periods and spaces
+- EXACTLY 4–5 sentences
+- Single paragraph (no line breaks)
+- No bullets or numbering
 - Align with HEADLINE + DOMAIN
-- Include:
-  - experience
-  - technologies
-  - systems
-  - business impact
+
+Must include:
+- years of experience
+- core technologies
+- type of systems built
+- business or user impact
+
+Style:
+- Natural and human
+- Avoid buzzwords and repetition
+- Should feel like a real professional summary, not generated text
 
 ---
 
 ## SKILLS
 
-- EXACTLY 6 ~ 8 categories
-- EXACTLY 8 ~ 10 skills each
-- 50–60% from JOB DESCRIPTION
-- Include:
-  - testing
-  - CI/CD
-  - monitoring
+- 6–8 categories
+- 6–10 skills per category
+- 50–60% aligned with JOB DESCRIPTION
 
+Must include:
+- testing
+- CI/CD
+- monitoring
+
+Rules:
 - No duplicates
-- No fake tools
+- No fake or obscure tools
+- Order skills by strength (most relevant first)
 
 ---
 
@@ -234,43 +242,98 @@ Use ROLE PLAN titles.
 
 ### Bullet Rules
 
-- First 2 roles ? 8 bullets
-- Others ? 6 bullets
+- First 2 roles: 6–8 bullets
+- Remaining roles: 4–6 bullets
 
-Each bullet:
-- exactly more than 25 characters
-- Action + Tech + System + Impact
-- End with period
+Each bullet MUST:
+- Be 18–30 words
+- Be written in past tense
+- Be a complete, natural sentence
+- End with a period
+
+---
+
+### Content Requirements (CRITICAL)
+
+Each bullet should clearly describe:
+- what was built or improved
+- how it was implemented (technology)
+- why it mattered (user or business impact)
+
+Each bullet MUST include at least one:
+- specific feature (e.g., onboarding flow, dashboards, payments, APIs)
+- user or customer context
+- business problem or workflow
+
+Avoid vague phrases like:
+- “various systems”
+- “enterprise platforms”
+- “distributed environments” (unless clearly explained)
 
 ---
 
 ### Metrics
 
-- EXACTLY 3 bullets per role include metrics
-- Others must NOT
+- Use metrics ONLY when realistic (0–3 per role)
+- Avoid repeating similar percentages across bullets
+- Metrics must feel believable and tied to actual improvements
 
 ---
 
-### Architecture
+### Architecture / Ownership
 
-- EXACTLY 2 bullets per role:
-  - system design / ownership
-  - NO metrics
+- 1–2 bullets per role should show:
+  - system design OR
+  - ownership of a feature, service, or component
 
----
-
-### Domain Justification
-
-- Bullets MUST reflect DOMAIN
-- If not possible ? fallback to Software concepts
+Avoid repeating generic phrases like “designed scalable architecture”
 
 ---
 
-### Style
+### Product & Collaboration
 
-- No repeated verbs >2 times per role
-- Natural language
-- MUST USE PAST TENSE for each bullet
+- At least 30% of bullets should reflect:
+  - product features
+  - user workflows
+  - customer-facing functionality
+
+Include collaboration with:
+- product managers
+- designers
+- cross-functional teams
+
+---
+
+### Modern Engineering Signals
+
+Include where applicable:
+- AI-assisted development tools (e.g., Copilot, Claude, Cursor)
+- performance optimization
+- testing strategies
+- real-world constraints (scale, reliability, usability)
+
+---
+
+### Style Rules
+
+- Avoid repeating the same verbs more than 2 times per role
+- Vary sentence structure
+- Use clear, concise, human-readable language
+- Prefer specific descriptions over buzzwords
+
+Limit buzzword usage:
+- “distributed systems” → max 2 per role
+- “scalable” → max 2 per role
+- “enterprise” → max 1 per role
+
+---
+
+### AUTHENTICITY RULE (MANDATORY)
+
+If a bullet could apply to any company or role, rewrite it to include:
+- specific implementation detail OR
+- feature-level context OR
+- meaningful technical decision
 
 ---
 
@@ -282,7 +345,6 @@ Each bullet:
 
 [Contact line: Email | Phone | Location | LinkedIn]
 - Include ONLY fields present
-- Correct separator formatting
 
 Summary:
 {summary}
@@ -301,80 +363,36 @@ Education:
 
 ---
 
+## SYMBOL & FORMATTING RULES
+
+Preserve exact forms:
+- CI/CD
+- Node.js
+- C++
+- API Gateway
+- %
+
+Use proper punctuation:
+- Commas for clarity where needed
+- Each bullet ends with a period
+
+---
+
+## PRIORITY ORDER (VERY IMPORTANT)
+
+If constraints conflict, prioritize:
+1. Clarity and readability
+2. Realism and authenticity
+3. Technical accuracy
+4. Formatting consistency
+
+---
+
 ## STRICT
 
-- No extra text
+- No extra commentary
 - No missing sections
-- Clean formatting
-
-## FORMAT INVARIANCE RULES (CRITICAL)
-
-You MUST preserve technical correctness, symbols, punctuation, and formatting exactly as specified below.
-
----
-
-## 1. SYMBOL LOCK (DO NOT MODIFY)
-
-Always preserve these EXACT forms:
-
-- CI/CD (never CI CD)
-- 30% (never 30 percent)
-- R&D (never R and D)
-- Node.js (never Node js)
-- C++ (never C plus plus)
-- API Gateway (unchanged)
-
----
-
-## 2. PUNCTUATION RULES (STRICT)
-
-- Each bullet MUST be a complete sentence
-- Use commas to separate multiple actions or clauses
-- Do NOT remove commas for simplification
-- Each bullet MUST end with a period (.)
-
----
-
-## 3. WORD COUNT RULE (HARD CONSTRAINT)
-
-- Each bullet MUST be EXACTLY 20 words
-- Period is NOT counted as a word
-- Do NOT approximate or exceed limit
-
----
-
-## 4. SENTENCE STRUCTURE
-
-Each bullet MUST follow:
-
-Action + Technology + System + Detail + Business Impact
-
-- Commas are allowed and required for multi-action clarity
-- Do NOT flatten sentences into comma-less chains
-
----
-
-## 5. ANTI-SIMPLIFICATION RULE
-
-Do NOT:
-- Replace symbols with words
-- Remove punctuation
-- Simplify technical terms
-- Reformat into plain English style
-- Change past tense
----
-
-## 6. VALIDATION (MANDATORY)
-
-Before output, ensure:
-
-- All symbols are intact
-- Commas are present where multiple actions exist
-- Each bullet = exactly 20 words
-- Each sentence is grammatically valid
-
-If any rule fails:
-→ Rewrite before final output
+- Output ONLY the final markdown
 `.trim();
 
 export const DEFAULT_STAGE4_PROMPT_TEMPLATE = `
@@ -461,7 +479,7 @@ export type Stage1Output = {
 
 /** Legacy wrapper used only for optional override of roles in {@link applyPromptPlaceholders}. */
 export type Stage2Output = {
-  roles: Stage2Role[];
+  roles: string[];
 };
 
 export type Stage3SkillCategory = {
@@ -593,6 +611,7 @@ export function buildStage3Prompt(
   profileData: string,
   jobDescription: string,
   stage1Output: Stage1Output,
+  stage2Output?: Stage2Output,
   customStage3Prompt?: string,
   targetTitle?: string
 ) {
@@ -607,7 +626,8 @@ export function buildStage3Prompt(
       profileData,
       jobDescWrapped,
       titleForPrompt,
-      stage1Output
+      stage1Output,
+      stage2Output
     );
   }
 
@@ -616,7 +636,8 @@ export function buildStage3Prompt(
     profileData,
     jobDescWrapped,
     titleForPrompt,
-    stage1Output
+    stage1Output,
+    stage2Output
   );
 }
 

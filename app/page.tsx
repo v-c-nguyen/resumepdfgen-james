@@ -3,14 +3,105 @@ import { useRef, useEffect, useState } from 'react';
 import { Copy, Check, Mail, Phone, MapPin, Linkedin, Sparkles, FileDown } from 'lucide-react';
 import { BaseResumeProfile } from './data/baseResumes';
 import {
-  buildFallbackStage1Output,
-  buildStage1Prompt,
   buildStage3Prompt,
   QA_PROMPT_TEMPLATE,
   Stage1Output,
+  Stage2Output,
 } from './utils/promptBuilder';
 
 const btnMotion = 'transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]';
+const DOMAIN_OPTIONS = [
+  { key: 'FullStack', label: 'Full Stack', headline: 'Senior Software Engineer' },
+  { key: 'AI Integration', label: 'AI Integration', headline: 'Senior Software Engineer (AI Integration)' },
+  { key: 'Applied AI', label: 'Applied AI', headline: 'Senior Software Engineer (Applied AI & Full Stack)' },
+  { key: 'AI/ML', label: 'AI/ML', headline: 'Senior AI/ML Engineer' },
+  { key: 'DevOps', label: 'DevOps', headline: 'Senior DevOps Engineer' },
+  { key: 'Data', label: 'Data', headline: 'Senior Data Engineer' },
+  { key: 'Salesforce', label: 'Salesforce', headline: 'Salesforce Technical Architect' },
+  { key: 'Solutions', label: 'Solutions', headline: 'Senior Solutions Engineer' },
+  { key: 'QA', label: 'QA', headline: 'Senior QA Automation Engineer' },
+] as const;
+
+type DomainKey = (typeof DOMAIN_OPTIONS)[number]['key'];
+
+const DOMAIN_ROLE_PLANS: Record<DomainKey, string[]> = {
+  FullStack: [
+    'Web Developer',
+    'Full Stack Engineer',
+    'Senior Software Engineer',
+    'Senior Software Engineer',
+  ],
+  'AI Integration': [
+    'Software Engineer',
+    'Full Stack Engineer',
+    'Senior Software Engineer',
+    'Senior Software Engineer (AI Integration)',
+  ],
+  'Applied AI': [
+    'Web Developer',
+    'Full Stack Engineer',
+    'Senior Software Developer',
+    'Senior Software Engineer (Applied AI & Full Stack)',
+  ],
+  'AI/ML': [
+    'Data Engineer',
+    'Machine Learning Engineer',
+    'Senior Machine Learning Engineer',
+    'Senior AI/ML Engineer',
+  ],
+  DevOps: [
+    'Software Engineer',
+    'Platform Engineer',
+    'Senior DevOps Engineer',
+    'Senior DevOps Engineer',
+  ],
+  Data: [
+    'Backend Engineer',
+    'Data Engineer',
+    'Senior Data Engineer',
+    'Senior Data Engineer',
+  ],
+  Salesforce: [
+    'Salesforce Developer/Admin',
+    'Salesforce Developer',
+    'Senior Salesforce Developer',
+    'Salesforce Technical Architect',
+  ],
+  Solutions: [
+    'Software Engineer',
+    'Software Engineer',
+    'Senior Software Engineer',
+    'Senior Solutions Engineer',
+  ],
+  QA: [
+    'QA Tester',
+    'QA Engineer',
+    'Senior QA Engineer',
+    'Senior QA Automation Engineer',
+  ],
+};
+
+function rolePlanJsonForDomain(domain: DomainKey): string {
+  return JSON.stringify(DOMAIN_ROLE_PLANS[domain], null, 2);
+}
+
+function parseRolePlanJson(rawRolePlanJson: string): string[] | null {
+  const raw = rawRolePlanJson.trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const roles = parsed
+      .map((r) => (typeof r === 'string' ? r.trim() : ''))
+      .filter(Boolean);
+    if (roles.length === 0) {
+      return null;
+    }
+    return roles;
+  } catch {
+    return null;
+  }
+}
 
 export default function Home() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -18,7 +109,8 @@ export default function Home() {
   const [selectedProfileName, setSelectedProfileName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [jobDescriptionForPrompt, setJobDescriptionForPrompt] = useState('');
-  const [stage1Json, setStage1Json] = useState('');
+  const [selectedDomain, setSelectedDomain] = useState<DomainKey>('FullStack');
+  const [rolePlanJson, setRolePlanJson] = useState(rolePlanJsonForDomain('FullStack'));
   const [promptCopied, setPromptCopied] = useState(false);
   const [promptCopyMessage, setPromptCopyMessage] = useState('Copied to clipboard');
   const [stageError, setStageError] = useState('');
@@ -70,72 +162,38 @@ export default function Home() {
     }
   };
 
-  const parseStage1Json = (): Stage1Output | null => {
-    const raw = stage1Json.trim();
-    if (!raw) {
-      setStageError('');
+  const buildSelectedDomainStage1Output = (): Stage1Output | null => {
+    const roleTitles = parseRolePlanJson(rolePlanJson);
+    if (!roleTitles) {
+      setStageError(
+        'Role Plan JSON must be a non-empty JSON array of title strings, e.g. ["Software Engineer","Senior Software Engineer"].'
+      );
       return null;
     }
-
-    try {
-      const parsed = JSON.parse(raw) as Partial<Stage1Output>;
-      const domain = typeof parsed.domain === 'string' ? parsed.domain.trim() : '';
-      const headline = typeof parsed.headline === 'string' ? parsed.headline.trim() : '';
-      const seniority = typeof parsed.seniority === 'string' ? parsed.seniority.trim() : '';
-
-      if (!domain || !headline || !seniority) {
-        setStageError('Stage 1 JSON must include non-empty "domain", "headline", and "seniority".');
-        return null;
-      }
-
-      if (!Array.isArray(parsed.roles)) {
-        setStageError('Stage 1 JSON must include a "roles" array.');
-        return null;
-      }
-
-      const roles = parsed.roles.map((r) => ({
-        original_title: typeof r?.original_title === 'string' ? r.original_title.trim() : '',
-        normalized_title: typeof r?.normalized_title === 'string' ? r.normalized_title.trim() : '',
-        adapted_title: typeof r?.adapted_title === 'string' ? r.adapted_title.trim() : '',
-      }));
-
-      if (roles.some((r) => !r.original_title || !r.normalized_title || !r.adapted_title)) {
-        setStageError(
-          'Each role must include non-empty "original_title", "normalized_title", and "adapted_title".'
-        );
-        return null;
-      }
-
-      setStageError('');
-      return { domain, headline, seniority, roles };
-    } catch {
-      setStageError('Stage 1 output is not valid JSON.');
-      return null;
-    }
-  };
-
-  const handleGenerateStage1Prompt = async () => {
-    const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
-    const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
-    const promptText = buildStage1Prompt(
-      profileData,
-      jobDesc,
-      selectedProfile?.customStage1Prompt,
-      selectedProfile?.targetTitle
-    );
+    const selectedOption = DOMAIN_OPTIONS.find((option) => option.key === selectedDomain) ?? DOMAIN_OPTIONS[0];
     setStageError('');
-    await copyPromptToClipboard(promptText, 'Stage 1 prompt copied');
+    return {
+      domain: selectedOption.key,
+      headline: selectedOption.headline,
+      seniority: 'Senior',
+      roles: [],
+    };
   };
 
   /** Builds the markdown resume prompt (formerly “stage 3” in code / DB: customStage3Prompt). */
   const handleGenerateMarkdownPrompt = async () => {
     const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
-    const stage1Output = parseStage1Json() ?? buildFallbackStage1Output(profileData, selectedProfile?.targetTitle);
+    const stage1Output = buildSelectedDomainStage1Output();
+    if (!stage1Output) return;
+    const stage2Output: Stage2Output = {
+      roles: parseRolePlanJson(rolePlanJson) ?? [],
+    };
     const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
     const promptText = buildStage3Prompt(
       profileData,
       jobDesc,
       stage1Output,
+      stage2Output,
       selectedProfile?.customStage3Prompt,
       selectedProfile?.targetTitle
     );
@@ -147,8 +205,8 @@ export default function Home() {
   };
 
   const inputClass =
-    'w-full bg-white border border-zinc-300 rounded-md px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400';
-  const labelClass = 'block text-zinc-600 text-sm font-medium mb-1.5';
+    'w-full bg-white border border-zinc-300 rounded-md px-3 py-1.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400';
+  const labelClass = 'block text-zinc-600 text-sm font-medium mb-1';
 
   if (loading) {
     return (
@@ -159,16 +217,16 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen py-8 px-4">
+    <main className="min-h-screen py-4 px-4">
       <div className="mx-auto max-w-xl">
-        <h1 className="text-xl font-semibold text-zinc-900 mb-6">Dynamic Resume PDF</h1>
+        <h1 className="text-xl font-semibold text-zinc-900 mb-3">Dynamic Resume PDF</h1>
         <form
           ref={formRef}
           action="/api/generate-dynamic-resume-pdf"
           method="POST"
           encType="multipart/form-data"
           target="_blank"
-          className="space-y-5"
+          className="space-y-3"
         >
           <div>
             <label className={labelClass}>Base Resume Profile</label>
@@ -183,13 +241,12 @@ export default function Home() {
               ))}
             </select>
             {selectedProfile && (selectedProfile.email || selectedProfile.phoneNumber || selectedProfile.fullAddress || selectedProfile.linkedinUrl) && (
-              <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-                <span className="text-xs text-zinc-500">Copy:</span>
+              <div className="mt-1.5 flex flex-wrap gap-1 items-center">
                 {selectedProfile.email && (
                   <button
                     type="button"
                     onClick={() => handleCopyContact('email', selectedProfile.email)}
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1.5 px-2.5 rounded-md border ${btnMotion} ${copiedField === 'email' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
+                    className={`inline-flex items-center gap-1 text-xs font-medium py-1 px-2 rounded-md border ${btnMotion} ${copiedField === 'email' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
                   >
                     {copiedField === 'email' ? <Check className="size-3.5 shrink-0" /> : <Mail className="size-3.5 shrink-0" />}
                     {copiedField === 'email' ? 'Copied' : 'Email'}
@@ -199,7 +256,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => handleCopyContact('phone', selectedProfile.phoneNumber)}
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1.5 px-2.5 rounded-md border ${btnMotion} ${copiedField === 'phone' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
+                    className={`inline-flex items-center gap-1 text-xs font-medium py-1 px-2 rounded-md border ${btnMotion} ${copiedField === 'phone' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
                   >
                     {copiedField === 'phone' ? <Check className="size-3.5 shrink-0" /> : <Phone className="size-3.5 shrink-0" />}
                     {copiedField === 'phone' ? 'Copied' : 'Phone'}
@@ -209,7 +266,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => handleCopyContact('address', selectedProfile.fullAddress)}
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1.5 px-2.5 rounded-md border ${btnMotion} ${copiedField === 'address' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
+                    className={`inline-flex items-center gap-1 text-xs font-medium py-1 px-2 rounded-md border ${btnMotion} ${copiedField === 'address' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
                   >
                     {copiedField === 'address' ? <Check className="size-3.5 shrink-0" /> : <MapPin className="size-3.5 shrink-0" />}
                     {copiedField === 'address' ? 'Copied' : 'Address'}
@@ -219,7 +276,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => handleCopyContact('linkedin', selectedProfile.linkedinUrl)}
-                    className={`inline-flex items-center gap-1.5 text-xs font-medium py-1.5 px-2.5 rounded-md border ${btnMotion} ${copiedField === 'linkedin' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
+                    className={`inline-flex items-center gap-1 text-xs font-medium py-1 px-2 rounded-md border ${btnMotion} ${copiedField === 'linkedin' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-zinc-100 text-zinc-700 border-zinc-300 hover:bg-zinc-200 hover:border-zinc-400'}`}
                   >
                     {copiedField === 'linkedin' ? <Check className="size-3.5 shrink-0" /> : <Linkedin className="size-3.5 shrink-0" />}
                     {copiedField === 'linkedin' ? 'Copied' : 'LinkedIn'}
@@ -234,37 +291,29 @@ export default function Home() {
             <textarea
               value={jobDescriptionForPrompt}
               onChange={(e) => setJobDescriptionForPrompt(e.target.value)}
-              rows={3}
+              rows={2}
               placeholder="Paste job description to build prompt…"
               className={`${inputClass} resize-none`}
             />
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={handleGenerateStage1Prompt}
-                className={`inline-flex items-center gap-2 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-2 px-4 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
-              >
-                <Sparkles className="size-4 shrink-0" />
-                Generate prompt for Stage 1
-              </button>
+            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
                 onClick={handleGenerateMarkdownPrompt}
-                className={`inline-flex items-center gap-2 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-2 px-4 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
               >
                 <Sparkles className="size-4 shrink-0" />
-                Generate prompt for Stage 2 (markdown)
+                Stage 2 prompt
               </button>
               <button
                 type="button"
                 onClick={handleGenerateQaPrompt}
-                className={`inline-flex items-center gap-2 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-2 px-4 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
               >
                 <Sparkles className="size-4 shrink-0" />
-                Generate QA prompt
+                QA prompt
               </button>
               {promptCopied && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md py-1.5 px-2.5 animate-copy-in">
+                <span className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md py-1 px-2 animate-copy-in">
                   <Check className="size-3.5 shrink-0" />
                   {promptCopyMessage}
                 </span>
@@ -273,16 +322,41 @@ export default function Home() {
           </div>
 
           <div>
-            <label className={labelClass}>Stage 1 output JSON (optional)</label>
+            <label className={labelClass}>Domain</label>
+            <div className="rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-2.5 shadow-sm">
+              <select
+                value={selectedDomain}
+                onChange={(e) => {
+                  const nextDomain = e.target.value as DomainKey;
+                  setSelectedDomain(nextDomain);
+                  setRolePlanJson(rolePlanJsonForDomain(nextDomain));
+                  setStageError('');
+                }}
+                className={inputClass}
+              >
+                {DOMAIN_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key} className="bg-white text-zinc-900">
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-zinc-500">
+                Auto-loads role titles. Edit before Stage 2 if needed.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Role Plan JSON</label>
             <textarea
-              value={stage1Json}
-              onChange={(e) => setStage1Json(e.target.value)}
-              rows={6}
-              placeholder='{"domain":"...","headline":"...","seniority":"...","roles":[...]}'
+              value={rolePlanJson}
+              onChange={(e) => setRolePlanJson(e.target.value)}
+              rows={4}
+              placeholder='["Software Engineer","Senior Software Engineer"]'
               className={`${inputClass} resize-none font-mono text-sm`}
             />
             {stageError && (
-              <p className="mt-2 text-xs text-red-600">{stageError}</p>
+              <p className="mt-1 text-xs text-red-600">{stageError}</p>
             )}
           </div>
 
@@ -291,14 +365,14 @@ export default function Home() {
             <textarea
               name="job_description"
               required
-              rows={5}
+              rows={4}
               cols={60}
               placeholder="Tailored resume text…"
               className={`${inputClass} resize-none`}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={labelClass}>Company</label>
               <input name="company" placeholder="Company" className={inputClass} />
@@ -313,7 +387,7 @@ export default function Home() {
 
           <button
             type="submit"
-            className={`w-full inline-flex items-center justify-center gap-2 bg-zinc-900 text-white font-medium py-2.5 rounded-md hover:bg-zinc-800 border-2 border-zinc-900 hover:border-zinc-800 shadow-sm ${btnMotion}`}
+            className={`w-full inline-flex items-center justify-center gap-2 bg-zinc-900 text-white font-medium py-2 rounded-md hover:bg-zinc-800 border-2 border-zinc-900 hover:border-zinc-800 shadow-sm ${btnMotion}`}
           >
             <FileDown className="size-4 shrink-0" />
             Generate PDF
