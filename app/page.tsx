@@ -237,11 +237,18 @@ export default function Home() {
               className={inputClass}
             >
               {baseResumes.map((p) => (
-                <option key={p.name} value={p.name} className="bg-white text-zinc-900">{p.name}</option>
+                <option key={p.name} value={p.name} className="bg-white text-zinc-900">
+                  {p.industry ? `${p.name} - ${p.industry}` : p.name}
+                </option>
               ))}
             </select>
-            {selectedProfile && (selectedProfile.email || selectedProfile.phoneNumber || selectedProfile.fullAddress || selectedProfile.linkedinUrl) && (
+            {selectedProfile && (selectedProfile.industry || selectedProfile.email || selectedProfile.phoneNumber || selectedProfile.fullAddress || selectedProfile.linkedinUrl) && (
               <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+                {selectedProfile.industry && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium py-1 px-2 rounded-md border bg-blue-50 text-blue-700 border-blue-200">
+                    Industry: {selectedProfile.industry}
+                  </span>
+                )}
                 {selectedProfile.email && (
                   <button
                     type="button"

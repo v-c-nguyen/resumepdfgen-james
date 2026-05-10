@@ -96,6 +96,7 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
       phoneNumber: '',
       fullAddress: '',
       linkedinUrl: '',
+      industry: '',
       jobDescription: '',
       targetTitle: '',
       logGenerations: false,
@@ -140,6 +141,7 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
             phoneNumber: editingProfile.phoneNumber || undefined,
             fullAddress: editingProfile.fullAddress || undefined,
             linkedinUrl: editingProfile.linkedinUrl || undefined,
+            industry: editingProfile.industry?.trim() || undefined,
             jobDescription: null,
             targetTitle: editingProfile.targetTitle?.trim() || undefined,
             logGenerations: editingProfile.logGenerations ?? false,
@@ -157,6 +159,7 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
             phoneNumber: editingProfile.phoneNumber || undefined,
             fullAddress: editingProfile.fullAddress || undefined,
             linkedinUrl: editingProfile.linkedinUrl || undefined,
+            industry: editingProfile.industry?.trim() || undefined,
             jobDescription: editingProfile.jobDescription || undefined,
             targetTitle: editingProfile.targetTitle?.trim() || undefined,
             logGenerations: editingProfile.logGenerations ?? false,
@@ -365,6 +368,18 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                 <p className="mt-1 text-xs text-gray-500">
                   Substituted for <code className="bg-gray-100 px-1 rounded">{"${targetTitle}"}</code> when generating the prompt. Leave empty to use the default in your prompt template.
                 </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Industry
+                </label>
+                <input
+                  type="text"
+                  value={editingProfile.industry ?? ''}
+                  onChange={(e) => setEditingProfile({ ...editingProfile, industry: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  placeholder="e.g., Healthcare, FinTech, E-commerce"
+                />
               </div>
 
               <div>
@@ -724,6 +739,9 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                     )}
                     {profile.customStage3Prompt && (
                       <p className="text-blue-600">✓ Stage 2 custom prompt configured</p>
+                    )}
+                    {profile.industry && (
+                      <p>Industry: {profile.industry}</p>
                     )}
                     <p>PDF Template: {(() => {
                       const template = pdfTemplates.find(t => t.value === (profile.pdfTemplate || (pdfTemplates.length > 0 ? pdfTemplates[0].value : 1)));

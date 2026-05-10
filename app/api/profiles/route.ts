@@ -31,6 +31,7 @@ export async function GET() {
         phoneNumber: true,
         fullAddress: true,
         linkedinUrl: true,
+        industry: true,
         jobDescription: true,
         targetTitle: true,
       },

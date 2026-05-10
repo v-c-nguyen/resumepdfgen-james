@@ -3,6 +3,7 @@
 export type BaseResumeProfile = {
   name: string; // profile display name used as the select value
   resumeText: string; // full plain-text resume template
+  industry?: string;
   customStage1Prompt?: string; // optional Stage 1 custom prompt
   customStage2Prompt?: string; // legacy / unused; merged into Stage 1
   customStage3Prompt?: string; // optional Stage 3 custom prompt

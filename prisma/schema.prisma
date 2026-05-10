@@ -23,6 +23,7 @@ model Profile {
   phoneNumber  String?
   fullAddress  String?
   linkedinUrl       String?
+  industry          String?
   jobDescription    String?  @db.Text
   targetTitle       String?
   logGenerations    Boolean  @default(false)
