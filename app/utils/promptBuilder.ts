@@ -517,7 +517,7 @@ function normalizeTitle(title: string): string {
   return t;
 }
 
-function extractRoleTitlesFromProfile(profileData: string): string[] {
+export function extractRoleTitlesFromProfile(profileData: string): string[] {
   const lines = profileData.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const out: string[] = [];
   for (const line of lines) {

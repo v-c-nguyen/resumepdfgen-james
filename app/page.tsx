@@ -4,13 +4,17 @@ import { Copy, Check, Mail, Phone, MapPin, Linkedin, Sparkles, FileDown } from '
 import { BaseResumeProfile } from './data/baseResumes';
 import {
   buildStage3Prompt,
+  extractRoleTitlesFromProfile,
   QA_PROMPT_TEMPLATE,
   Stage1Output,
   Stage2Output,
 } from './utils/promptBuilder';
 
 const btnMotion = 'transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]';
+const DEFAULT_DOMAIN_KEY = 'Default' as const;
+
 const DOMAIN_OPTIONS = [
+  { key: DEFAULT_DOMAIN_KEY, label: 'Default (from profile)' },
   { key: 'FullStack', label: 'Full Stack', headline: 'Senior Software Engineer' },
   { key: 'AI Integration', label: 'AI Integration', headline: 'Senior Software Engineer (AI Integration)' },
   { key: 'Applied AI', label: 'Applied AI', headline: 'Senior Software Engineer (Applied AI & Full Stack)' },
@@ -20,11 +24,27 @@ const DOMAIN_OPTIONS = [
   { key: 'Salesforce', label: 'Salesforce', headline: 'Salesforce Technical Architect' },
   { key: 'Solutions', label: 'Solutions', headline: 'Senior Solutions Engineer' },
   { key: 'QA', label: 'QA', headline: 'Senior QA Automation Engineer' },
+  {
+    key: 'SDR & Outbound Sales',
+    label: 'SDR & Outbound Sales',
+    headline: 'Senior SDR & Outbound Sales Specialist',
+  },
+  {
+    key: 'Demand Gen & Growth Marketing',
+    label: 'Demand Gen & Growth Marketing',
+    headline: 'Demand Generation & Growth Marketing Specialist',
+  },
+  {
+    key: 'RevOps, Strategy & Management',
+    label: 'RevOps, Strategy & Management',
+    headline: 'Revenue Operations & Growth Systems Specialist',
+  },
 ] as const;
 
 type DomainKey = (typeof DOMAIN_OPTIONS)[number]['key'];
+type PresetDomainKey = Exclude<DomainKey, typeof DEFAULT_DOMAIN_KEY>;
 
-const DOMAIN_ROLE_PLANS: Record<DomainKey, string[]> = {
+const DOMAIN_ROLE_PLANS: Record<PresetDomainKey, string[]> = {
   FullStack: [
     'Web Developer',
     'Full Stack Engineer',
@@ -79,10 +99,56 @@ const DOMAIN_ROLE_PLANS: Record<DomainKey, string[]> = {
     'Senior QA Engineer',
     'Senior QA Automation Engineer',
   ],
+  'SDR & Outbound Sales': [
+    'Lead Generation Associate',
+    'Sales Development Representative (SDR)',
+    'Business Development Representative (BDR)',
+    'Senior Outbound Sales Specialist',
+  ],
+  'Demand Gen & Growth Marketing': [
+    'Marketing & Lead Generation Coordinator',
+    'Growth Marketing Specialist',
+    'Demand Generation Specialist',
+    'Growth & Demand Generation Specialist',
+  ],
+  'RevOps, Strategy & Management': [
+    'Sales Operations Associate',
+    'Sales Operations & CRM Specialist',
+    'Revenue Operations Specialist',
+    'Lead Generation & Revenue Operations Consultant',
+  ],
 };
 
-function rolePlanJsonForDomain(domain: DomainKey): string {
+function rolePlanTitlesFromResumeText(resumeText: string): string[] {
+  const titles = extractRoleTitlesFromProfile(resumeText);
+  const list = titles.length > 0 ? titles : ['Software Engineer'];
+  // Resume text lists roles newest-first; preset domains use chronological order (earliest → latest).
+  return [...list].reverse();
+}
+
+function rolePlanJsonFromResumeText(resumeText: string): string {
+  return JSON.stringify(rolePlanTitlesFromResumeText(resumeText), null, 2);
+}
+
+function rolePlanJsonForDomain(domain: DomainKey, resumeText?: string): string {
+  if (domain === DEFAULT_DOMAIN_KEY) {
+    return rolePlanJsonFromResumeText(resumeText ?? '');
+  }
   return JSON.stringify(DOMAIN_ROLE_PLANS[domain], null, 2);
+}
+
+function headlineForDomain(domain: DomainKey, profile?: BaseResumeProfile): string {
+  if (domain === DEFAULT_DOMAIN_KEY) {
+    const fromTarget = profile?.targetTitle?.trim();
+    if (fromTarget) return fromTarget;
+    const firstLine = profile?.resumeText
+      ?.split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean);
+    return firstLine ?? 'Senior Software Engineer';
+  }
+  const option = DOMAIN_OPTIONS.find((o) => o.key === domain);
+  return option && 'headline' in option ? option.headline : 'Senior Software Engineer';
 }
 
 function parseRolePlanJson(rawRolePlanJson: string): string[] | null {
@@ -109,8 +175,8 @@ export default function Home() {
   const [selectedProfileName, setSelectedProfileName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [jobDescriptionForPrompt, setJobDescriptionForPrompt] = useState('');
-  const [selectedDomain, setSelectedDomain] = useState<DomainKey>('FullStack');
-  const [rolePlanJson, setRolePlanJson] = useState(rolePlanJsonForDomain('FullStack'));
+  const [selectedDomain, setSelectedDomain] = useState<DomainKey>(DEFAULT_DOMAIN_KEY);
+  const [rolePlanJson, setRolePlanJson] = useState('[]');
   const [promptCopied, setPromptCopied] = useState(false);
   const [promptCopyMessage, setPromptCopyMessage] = useState('Copied to clipboard');
   const [stageError, setStageError] = useState('');
@@ -151,6 +217,11 @@ export default function Home() {
     fetchProfiles();
   }, []);
 
+  useEffect(() => {
+    if (selectedDomain !== DEFAULT_DOMAIN_KEY || !selectedProfile?.resumeText) return;
+    setRolePlanJson(rolePlanJsonFromResumeText(selectedProfile.resumeText));
+  }, [selectedDomain, selectedProfile?.name, selectedProfile?.resumeText]);
+
   const copyPromptToClipboard = async (promptText: string, copiedMessage: string) => {
     try {
       await navigator.clipboard.writeText(promptText);
@@ -170,11 +241,13 @@ export default function Home() {
       );
       return null;
     }
-    const selectedOption = DOMAIN_OPTIONS.find((option) => option.key === selectedDomain) ?? DOMAIN_OPTIONS[0];
     setStageError('');
     return {
-      domain: selectedOption.key,
-      headline: selectedOption.headline,
+      domain:
+        selectedDomain === DEFAULT_DOMAIN_KEY
+          ? selectedProfile?.industry?.trim() || 'Default'
+          : selectedDomain,
+      headline: headlineForDomain(selectedDomain, selectedProfile),
       seniority: 'Senior',
       roles: [],
     };
@@ -233,7 +306,16 @@ export default function Home() {
             <select
               name="base_resume_profile"
               value={selectedProfileName || baseResumes[0]?.name || ''}
-              onChange={(e) => setSelectedProfileName(e.target.value)}
+              onChange={(e) => {
+                const name = e.target.value;
+                setSelectedProfileName(name);
+                if (selectedDomain === DEFAULT_DOMAIN_KEY) {
+                  const profile = baseResumes.find((p) => p.name === name);
+                  if (profile?.resumeText) {
+                    setRolePlanJson(rolePlanJsonFromResumeText(profile.resumeText));
+                  }
+                }
+              }}
               className={inputClass}
             >
               {baseResumes.map((p) => (
@@ -336,7 +418,9 @@ export default function Home() {
                 onChange={(e) => {
                   const nextDomain = e.target.value as DomainKey;
                   setSelectedDomain(nextDomain);
-                  setRolePlanJson(rolePlanJsonForDomain(nextDomain));
+                  setRolePlanJson(
+                    rolePlanJsonForDomain(nextDomain, selectedProfile?.resumeText)
+                  );
                   setStageError('');
                 }}
                 className={inputClass}
@@ -348,7 +432,7 @@ export default function Home() {
                 ))}
               </select>
               <p className="mt-1 text-xs text-zinc-500">
-                Auto-loads role titles. Edit before Stage 2 if needed.
+                Default uses role titles from the profile&apos;s resume text. Other domains load preset title lists.
               </p>
             </div>
           </div>
