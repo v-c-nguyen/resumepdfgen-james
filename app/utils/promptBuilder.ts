@@ -167,193 +167,187 @@ Example (P=6):
 `.trim();
 
 export const DEFAULT_STAGE3_PROMPT_TEMPLATE = `
-You are a high-precision resume content generator that produces realistic, human-readable, and technically strong resumes.
+You are a high-precision resume generator producing realistic, technically strong, ATS-friendly resumes.
 
-INPUT:
+INPUT
 
-PROFILE:
-\${profileData}
-
-JOB DESCRIPTION:
-\${jobDescription}
-
-DOMAIN:
-\${domain}
-
-HEADLINE:
-\${headline}
-
-ROLE PLAN:
-\${roles}
-
-TOTAL ROLES:
-\${experienceCount}
+PROFILE: \${profileData}
+JOB DESCRIPTION: \${jobDescription}
+DOMAIN: \${domain}
+HEADLINE: \${headline}
+ROLE PLAN: \${roles}
+TOTAL ROLES: \${experienceCount}
 
 ---
 
-OUTPUT:
-Return ONLY a Markdown resume in a single \`\`\`markdown code block.
+OUTPUT
+
+Return ONLY one Markdown resume inside a single \`\`\`markdown code block.
 
 ---
 
-## SUMMARY
+SUMMARY
 
-- EXACTLY 4–5 sentences
-- Single paragraph (no line breaks)
-- No bullets or numbering
-- Align with HEADLINE + DOMAIN
+- 4–5 sentences, single paragraph
+- Resume-style voice only
+- No candidate name or third-person pronouns
+- Start with role identity + years of experience
+- Align with HEADLINE, DOMAIN, and JOB DESCRIPTION
 
-Must include:
-- years of experience
+Include:
 - core technologies
-- type of systems built
+- specialization
+- systems/products/workflows
 - business or user impact
 
-Style:
-- Natural and human
-- Avoid buzzwords and repetition
-- Should feel like a real professional summary, not generated text
+Rules:
+- Specific over generic
+- Vary sentence structure
+- Every sentence should include:
+  - technology,
+  - implementation context,
+  - or engineering outcome
+- Keep AI-tool mentions minimal and workflow-related
+
+Avoid:
+- biography tone
+- vague claims
+- corporate buzzwords
+- repetitive openings
 
 ---
 
-## SKILLS
+SKILLS
 
-- 6–8 categories
-- 6–10 skills per category
-- 50–60% aligned with JOB DESCRIPTION
+- 6–8 technical categories
+- 8-10 skills per category
+- Prioritize JOB DESCRIPTION relevance without mirroring it too closely
+- Include adjacent, foundational, and ecosystem technologies a senior engineer would realistically know
+- Uneven category sizes allowed
+- Order by strength/relevance
 
-Must include:
+Include where relevant:
 - testing
 - CI/CD
-- monitoring
+- observability
 
 Rules:
-- No duplicates
-- No fake or obscure tools
-- Order skills by strength (most relevant first)
+- Use specific technologies only
+- Reflect realistic senior-engineer depth and accumulated experience
+- Include adjacent/relevant technologies beyond the JD
+- Historically plausible stacks only
+- Avoid soft skills, fake tools, duplicates, generic concepts, and excessive JD keyword matching
+- Keep AI-tool mentions minimal and natural
 
 ---
 
-## EXPERIENCE
+EXPERIENCE
 
-Use ROLE PLAN titles.
+- Reverse chronological order
+- Use ROLE PLAN titles
+- First 2 roles: 8–10 bullets
+- Remaining roles: 6–8 bullets
 
----
+Bullet Rules:
+- 18–30 words
+- Past tense
+- Natural sentence ending with period
+- Vary structure, density, and verbs
 
-### Bullet Rules
+Each bullet should show:
+- implementation detail
+- technical context
+- user/business/operational impact
 
-- First 2 roles: 6–8 bullets
-- Remaining roles: 4–6 bullets
+Reference where relevant:
+- APIs
+- pipelines
+- schemas
+- queues
+- caching
+- auth
+- CI/CD
+- monitoring
+- testing
+- dashboards
+- onboarding
+- reporting
+- integrations
+- operational tooling
 
-Each bullet MUST:
-- Be 18–30 words
-- Be written in past tense
-- Be a complete, natural sentence
-- End with a period
+Realism:
+- Use company/domain-specific language
+- Include concrete implementation details
+- Mix feature work with debugging, migration, scaling, reliability, optimization, refactoring, maintenance, incident prevention, and operational issues
+- Include occasional edge cases or engineering quirks:
+  - stale caches
+  - retry handling
+  - malformed payloads
+  - flaky tests
+  - async failures
+  - webhook ordering
+  - pagination bottlenecks
+  - duplicate records
+  - timeout spikes
+  - state sync bugs
+  - legacy compatibility
+- Include realistic tradeoffs or temporary fixes where relevant
+- Avoid over-packing technologies into single bullets
+- Technologies must match historical timeframe
+- AI-tool mentions must support real workflows
+- Include 1–2 memorable engineering situations across the resume
 
----
+Additional Rules:
+- At least 30% of bullets should involve product features, workflows, customer-facing functionality, or cross-functional collaboration
+- Use metrics sparingly and realistically
+- Prefer operational scale/context over repeated percentages
+- Earlier roles → implementation-heavy
+- Later roles → ownership/architecture-heavy
+- Allow occasional simpler bullets for realism
 
-### Content Requirements (CRITICAL)
-
-Each bullet should clearly describe:
-- what was built or improved
-- how it was implemented (technology)
-- why it mattered (user or business impact)
-
-Each bullet MUST include at least one:
-- specific feature (e.g., onboarding flow, dashboards, payments, APIs)
-- user or customer context
-- business problem or workflow
-
-Avoid vague phrases like:
-- “various systems”
-- “enterprise platforms”
-- “distributed environments” (unless clearly explained)
-
----
-
-### Metrics
-
-- Use metrics ONLY when realistic (0–3 per role)
-- Avoid repeating similar percentages across bullets
-- Metrics must feel believable and tied to actual improvements
-
----
-
-### Architecture / Ownership
-
-- 1–2 bullets per role should show:
-  - system design OR
-  - ownership of a feature, service, or component
-
-Avoid repeating generic phrases like “designed scalable architecture”
-
----
-
-### Product & Collaboration
-
-- At least 30% of bullets should reflect:
-  - product features
-  - user workflows
-  - customer-facing functionality
-
-Include collaboration with:
-- product managers
-- designers
-- cross-functional teams
-
----
-
-### Modern Engineering Signals
-
-Include where applicable:
-- AI-assisted development tools (e.g., Copilot, Claude, Cursor)
-- performance optimization
-- testing strategies
-- real-world constraints (scale, reliability, usability)
+Avoid:
+- generic SaaS bullets
+- repetitive templates
+- vague claims
+- overly polished achievements
+- repeated wording/buzzwords
 
 ---
 
-### Style Rules
+EDUCATION
 
-- Avoid repeating the same verbs more than 2 times per role
-- Vary sentence structure
-- Use clear, concise, human-readable language
-- Prefer specific descriptions over buzzwords
-
-Limit buzzword usage:
-- “distributed systems” → max 2 per role
-- “scalable” → max 2 per role
-- “enterprise” → max 1 per role
+Include:
+- degree
+- institution
+- graduation year
 
 ---
 
-### AUTHENTICITY RULE (MANDATORY)
+FORMATTING
 
-If a bullet could apply to any company or role, rewrite it to include:
-- specific implementation detail OR
-- feature-level context OR
-- meaningful technical decision
+- No markdown headings (#, ##, ###)
+- No bold formatting
+- Use plain section titles only:
+  - Summary:
+  - Technical Skills:
+  - Experience:
+  - Education:
 
----
-
-## MARKDOWN FORMAT
+Format:
 
 \`\`\`markdown
 [HEADLINE]
 [Candidate Name]
 
-[Contact line: Email | Phone | Location | LinkedIn]
-- Include ONLY fields present
+[Contact Info]
 
 Summary:
 {summary}
 
 Technical Skills:
-• {Category}: skill, skill, skill
+• Category: skills
 
 Experience:
-{For each role}
 [Title] at [Company] : [Dates]
 • bullet
 
@@ -363,36 +357,16 @@ Education:
 
 ---
 
-## SYMBOL & FORMATTING RULES
+STRICT
 
-Preserve exact forms:
-- CI/CD
-- Node.js
-- C++
-- API Gateway
-- %
-
-Use proper punctuation:
-- Commas for clarity where needed
-- Each bullet ends with a period
-
----
-
-## PRIORITY ORDER (VERY IMPORTANT)
-
-If constraints conflict, prioritize:
-1. Clarity and readability
-2. Realism and authenticity
-3. Technical accuracy
-4. Formatting consistency
-
----
-
-## STRICT
-
-- No extra commentary
-- No missing sections
-- Output ONLY the final markdown
+- Output ONLY final resume
+- No commentary or placeholders
+- Preserve exact forms:
+  - CI/CD
+  - Node.js
+  - C++
+  - API Gateway
+  - %
 `.trim();
 
 export const DEFAULT_STAGE4_PROMPT_TEMPLATE = `

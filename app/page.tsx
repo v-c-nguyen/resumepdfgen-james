@@ -27,17 +27,17 @@ const DOMAIN_OPTIONS = [
   {
     key: 'SDR & Outbound Sales',
     label: 'SDR & Outbound Sales',
-    headline: 'Senior SDR & Outbound Sales Specialist',
+    headline: 'B2B Lead Generation & Sales Development Consultant',
   },
   {
     key: 'Demand Gen & Growth Marketing',
     label: 'Demand Gen & Growth Marketing',
-    headline: 'Demand Generation & Growth Marketing Specialist',
+    headline: 'Growth & Demand Generation Consultant',
   },
   {
     key: 'RevOps, Strategy & Management',
     label: 'RevOps, Strategy & Management',
-    headline: 'Revenue Operations & Growth Systems Specialist',
+    headline: 'Lead Generation & Revenue Operations Consultant',
   },
 ] as const;
 
@@ -141,11 +141,7 @@ function headlineForDomain(domain: DomainKey, profile?: BaseResumeProfile): stri
   if (domain === DEFAULT_DOMAIN_KEY) {
     const fromTarget = profile?.targetTitle?.trim();
     if (fromTarget) return fromTarget;
-    const firstLine = profile?.resumeText
-      ?.split(/\r?\n/)
-      .map((line) => line.trim())
-      .find(Boolean);
-    return firstLine ?? 'Senior Software Engineer';
+    return 'Senior Software Engineer';
   }
   const option = DOMAIN_OPTIONS.find((o) => o.key === domain);
   return option && 'headline' in option ? option.headline : 'Senior Software Engineer';
