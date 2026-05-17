@@ -103,13 +103,13 @@ const DOMAIN_ROLE_PLANS: Record<PresetDomainKey, string[]> = {
     'Lead Generation Associate',
     'Sales Development Representative (SDR)',
     'Business Development Representative (BDR)',
-    'Senior Outbound Sales Specialist',
+    'B2B Lead Generation & Sales Development Consultant',
   ],
   'Demand Gen & Growth Marketing': [
     'Marketing & Lead Generation Coordinator',
     'Growth Marketing Specialist',
-    'Demand Generation Specialist',
-    'Growth & Demand Generation Specialist',
+    'Demand Generation Specialist - SaaS & B2B Growth',
+    'Growth & Demand Generation Consultant',
   ],
   'RevOps, Strategy & Management': [
     'Sales Operations Associate',
