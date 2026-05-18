@@ -18,7 +18,7 @@ export async function GET() {
     }
 
     const profiles = await prisma.profile.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: [{ industry: 'asc' }, { name: 'asc' }],
       select: {
         name: true,
         resumeText: true,
