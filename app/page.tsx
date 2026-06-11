@@ -3,12 +3,20 @@ import { useRef, useEffect, useState } from 'react';
 import { Copy, Check, Mail, Phone, MapPin, Linkedin, Sparkles, FileDown } from 'lucide-react';
 import { BaseResumeProfile } from './data/baseResumes';
 import {
+  buildFallbackStage1Output,
+  buildStage1Prompt,
   buildStage3Prompt,
+  DEFAULT_STAGE1_PROMPT_TEMPLATE,
+  DEFAULT_STAGE3_PROMPT_TEMPLATE,
   extractRoleTitlesFromProfile,
+  parseStage1Output,
   QA_PROMPT_TEMPLATE,
   Stage1Output,
   Stage2Output,
 } from './utils/promptBuilder';
+import type { DefaultPrompts } from '@/lib/defaultPrompts';
+
+type PromptGenerationMode = '1-stage' | '2-stage';
 
 const btnMotion = 'transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]';
 const DEFAULT_DOMAIN_KEY = 'Default' as const;
@@ -171,12 +179,19 @@ export default function Home() {
   const [selectedProfileName, setSelectedProfileName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [jobDescriptionForPrompt, setJobDescriptionForPrompt] = useState('');
+  const [promptGenerationMode, setPromptGenerationMode] = useState<PromptGenerationMode>('1-stage');
+  const [stage1Result, setStage1Result] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<DomainKey>(DEFAULT_DOMAIN_KEY);
   const [rolePlanJson, setRolePlanJson] = useState('[]');
+  const [showDomainRolePlan, setShowDomainRolePlan] = useState(true);
   const [promptCopied, setPromptCopied] = useState(false);
   const [promptCopyMessage, setPromptCopyMessage] = useState('Copied to clipboard');
-  const [stageError, setStageError] = useState('');
   const [copiedField, setCopiedField] = useState<'email' | 'phone' | 'address' | 'linkedin' | null>(null);
+  const [defaultPrompts, setDefaultPrompts] = useState<DefaultPrompts>({
+    stage1Prompt: DEFAULT_STAGE1_PROMPT_TEMPLATE,
+    stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
+    qaPrompt: QA_PROMPT_TEMPLATE,
+  });
 
   const effectiveProfileName = selectedProfileName || baseResumes[0]?.name;
   const selectedProfile = baseResumes.find((p) => p.name === effectiveProfileName);
@@ -194,23 +209,33 @@ export default function Home() {
   };
 
   useEffect(() => {
-    async function fetchProfiles() {
+    async function fetchInitialData() {
       try {
-        const response = await fetch('/api/profiles');
-        const data = await response.json();
-        if (data.profiles) {
-          setBaseResumes(data.profiles);
-          if (data.profiles.length > 0 && !selectedProfileName) {
-            setSelectedProfileName(data.profiles[0].name);
+        const [profilesResponse, promptsResponse] = await Promise.all([
+          fetch('/api/profiles'),
+          fetch('/api/default-prompts'),
+        ]);
+        const profilesData = await profilesResponse.json();
+        if (profilesData.profiles) {
+          setBaseResumes(profilesData.profiles);
+          if (profilesData.profiles.length > 0 && !selectedProfileName) {
+            setSelectedProfileName(profilesData.profiles[0].name);
+          }
+        }
+
+        if (promptsResponse.ok) {
+          const promptsData = await promptsResponse.json();
+          if (promptsData.prompts) {
+            setDefaultPrompts(promptsData.prompts);
           }
         }
       } catch (error) {
-        console.error('Failed to fetch profiles:', error);
+        console.error('Failed to fetch initial data:', error);
       } finally {
         setLoading(false);
       }
     }
-    fetchProfiles();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
@@ -229,48 +254,78 @@ export default function Home() {
     }
   };
 
-  const buildSelectedDomainStage1Output = (): Stage1Output | null => {
-    const roleTitles = parseRolePlanJson(rolePlanJson);
-    if (!roleTitles) {
-      setStageError(
-        'Role Plan JSON must be a non-empty JSON array of title strings, e.g. ["Software Engineer","Senior Software Engineer"].'
-      );
-      return null;
-    }
-    setStageError('');
-    return {
-      domain:
-        selectedDomain === DEFAULT_DOMAIN_KEY
-          ? selectedProfile?.industry?.trim() || 'Default'
-          : selectedDomain,
-      headline: headlineForDomain(selectedDomain, selectedProfile),
-      seniority: 'Senior',
-      roles: [],
-    };
+  const buildSelectedDomainStage1Output = (): Stage1Output => ({
+    domain:
+      selectedDomain === DEFAULT_DOMAIN_KEY
+        ? selectedProfile?.industry?.trim() || 'Default'
+        : selectedDomain,
+    headline: headlineForDomain(selectedDomain, selectedProfile),
+    seniority: 'Senior',
+    roles: [],
+  });
+
+  const handleGenerateStage1Prompt = async () => {
+    const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
+    const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
+    const promptText = buildStage1Prompt(
+      profileData,
+      jobDesc,
+      selectedProfile?.customStage1Prompt ?? defaultPrompts.stage1Prompt,
+      selectedProfile?.targetTitle
+    );
+    await copyPromptToClipboard(promptText, 'Stage 1 prompt copied');
   };
 
   /** Builds the markdown resume prompt (formerly “stage 3” in code / DB: customStage3Prompt). */
-  const handleGenerateMarkdownPrompt = async () => {
+  const handleGenerateStage2Prompt = async () => {
     const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
-    const stage1Output = buildSelectedDomainStage1Output();
-    if (!stage1Output) return;
-    const stage2Output: Stage2Output = {
-      roles: parseRolePlanJson(rolePlanJson) ?? [],
-    };
     const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
+
+    if (promptGenerationMode === '1-stage') {
+      const stage1Output = buildSelectedDomainStage1Output();
+      const stage2Output: Stage2Output = {
+        roles: parseRolePlanJson(rolePlanJson) ?? [],
+      };
+      const plannerOutput = JSON.stringify(
+        {
+          domain: stage1Output.domain,
+          headline: stage1Output.headline,
+          seniority: stage1Output.seniority,
+          roles: stage2Output.roles,
+        },
+        null,
+        2
+      );
+      const promptText = buildStage3Prompt(
+        profileData,
+        jobDesc,
+        stage1Output,
+        stage2Output,
+        selectedProfile?.customStage3Prompt ?? defaultPrompts.stage2Prompt,
+        selectedProfile?.targetTitle,
+        plannerOutput
+      );
+      await copyPromptToClipboard(promptText, 'Stage 2 prompt copied');
+      return;
+    }
+
+    const stage1Output =
+      parseStage1Output(stage1Result) ??
+      buildFallbackStage1Output(profileData, selectedProfile?.targetTitle);
     const promptText = buildStage3Prompt(
       profileData,
       jobDesc,
       stage1Output,
-      stage2Output,
-      selectedProfile?.customStage3Prompt,
-      selectedProfile?.targetTitle
+      undefined,
+      selectedProfile?.customStage3Prompt ?? defaultPrompts.stage2Prompt,
+      selectedProfile?.targetTitle,
+      stage1Result.trim()
     );
     await copyPromptToClipboard(promptText, 'Stage 2 prompt copied');
   };
 
   const handleGenerateQaPrompt = async () => {
-    await copyPromptToClipboard(QA_PROMPT_TEMPLATE, 'QA prompt copied');
+    await copyPromptToClipboard(defaultPrompts.qaPrompt, 'QA prompt copied');
   };
 
   const inputClass =
@@ -381,9 +436,47 @@ export default function Home() {
               className={`${inputClass} resize-none`}
             />
             <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+              <div
+                className="inline-flex rounded-md border border-zinc-300 overflow-hidden text-sm shrink-0"
+                role="group"
+                aria-label="Prompt generation mode"
+              >
+                <button
+                  type="button"
+                  onClick={() => setPromptGenerationMode('1-stage')}
+                  className={`px-2.5 py-1.5 font-medium border-r border-zinc-300 ${btnMotion} ${
+                    promptGenerationMode === '1-stage'
+                      ? 'bg-zinc-800 text-white'
+                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                  }`}
+                >
+                  1-stage
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPromptGenerationMode('2-stage')}
+                  className={`px-2.5 py-1.5 font-medium ${btnMotion} ${
+                    promptGenerationMode === '2-stage'
+                      ? 'bg-zinc-800 text-white'
+                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                  }`}
+                >
+                  2-stage
+                </button>
+              </div>
+              {promptGenerationMode === '2-stage' && (
+                <button
+                  type="button"
+                  onClick={handleGenerateStage1Prompt}
+                  className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+                >
+                  <Sparkles className="size-4 shrink-0" />
+                  Stage 1 prompt
+                </button>
+              )}
               <button
                 type="button"
-                onClick={handleGenerateMarkdownPrompt}
+                onClick={handleGenerateStage2Prompt}
                 className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
               >
                 <Sparkles className="size-4 shrink-0" />
@@ -404,46 +497,91 @@ export default function Home() {
                 </span>
               )}
             </div>
+            {promptGenerationMode === '2-stage' && (
+              <div className="mt-2">
+                <label className={labelClass}>Stage 1 result</label>
+                <textarea
+                  value={stage1Result}
+                  onChange={(e) => setStage1Result(e.target.value)}
+                  rows={3}
+                  placeholder="Paste Stage 1 LLM JSON output here before generating Stage 2 prompt…"
+                  className={`${inputClass} resize-none font-mono text-sm`}
+                />
+              </div>
+            )}
           </div>
 
           <div>
-            <label className={labelClass}>Domain</label>
-            <div className="rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-2.5 shadow-sm">
-              <select
-                value={selectedDomain}
-                onChange={(e) => {
-                  const nextDomain = e.target.value as DomainKey;
-                  setSelectedDomain(nextDomain);
-                  setRolePlanJson(
-                    rolePlanJsonForDomain(nextDomain, selectedProfile?.resumeText)
-                  );
-                  setStageError('');
-                }}
-                className={inputClass}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <label className="text-zinc-600 text-sm font-medium">Domain & role plan</label>
+              <div
+                className="inline-flex rounded-md border border-zinc-300 overflow-hidden text-sm shrink-0"
+                role="group"
+                aria-label="Domain and role plan visibility"
               >
-                {DOMAIN_OPTIONS.map((option) => (
-                  <option key={option.key} value={option.key} className="bg-white text-zinc-900">
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-zinc-500">
-                Default uses role titles from the profile&apos;s resume text. Other domains load preset title lists.
-              </p>
+                <button
+                  type="button"
+                  onClick={() => setShowDomainRolePlan(true)}
+                  className={`px-2.5 py-1.5 font-medium border-r border-zinc-300 ${btnMotion} ${
+                    showDomainRolePlan
+                      ? 'bg-zinc-800 text-white'
+                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                  }`}
+                >
+                  Show
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDomainRolePlan(false)}
+                  className={`px-2.5 py-1.5 font-medium ${btnMotion} ${
+                    !showDomainRolePlan
+                      ? 'bg-zinc-800 text-white'
+                      : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                  }`}
+                >
+                  Hide
+                </button>
+              </div>
             </div>
-          </div>
+            {showDomainRolePlan && (
+              <div className="space-y-3">
+                <div>
+                  <label className={labelClass}>Domain</label>
+                  <div className="rounded-xl border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-2.5 shadow-sm">
+                    <select
+                      value={selectedDomain}
+                      onChange={(e) => {
+                        const nextDomain = e.target.value as DomainKey;
+                        setSelectedDomain(nextDomain);
+                        setRolePlanJson(
+                          rolePlanJsonForDomain(nextDomain, selectedProfile?.resumeText)
+                        );
+                      }}
+                      className={inputClass}
+                    >
+                      {DOMAIN_OPTIONS.map((option) => (
+                        <option key={option.key} value={option.key} className="bg-white text-zinc-900">
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Default uses role titles from the profile&apos;s resume text. Other domains load preset title lists.
+                    </p>
+                  </div>
+                </div>
 
-          <div>
-            <label className={labelClass}>Role Plan JSON</label>
-            <textarea
-              value={rolePlanJson}
-              onChange={(e) => setRolePlanJson(e.target.value)}
-              rows={4}
-              placeholder='["Software Engineer","Senior Software Engineer"]'
-              className={`${inputClass} resize-none font-mono text-sm`}
-            />
-            {stageError && (
-              <p className="mt-1 text-xs text-red-600">{stageError}</p>
+                <div>
+                  <label className={labelClass}>Role Plan JSON</label>
+                  <textarea
+                    value={rolePlanJson}
+                    onChange={(e) => setRolePlanJson(e.target.value)}
+                    rows={4}
+                    placeholder='["Software Engineer","Senior Software Engineer"]'
+                    className={`${inputClass} resize-none font-mono text-sm`}
+                  />
+                </div>
+              </div>
             )}
           </div>
 

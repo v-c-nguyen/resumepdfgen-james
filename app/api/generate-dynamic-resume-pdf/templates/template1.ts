@@ -11,6 +11,8 @@ import {
   wrapSkillsAfterCategory,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  baselineFitsAboveBottomMargin,
+  RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
 
 // Template 1 Body Content Renderer - Elegant top accent bar design
@@ -53,7 +55,7 @@ function renderBodyContentTemplate1(
       const sectionLines = wrapText(sectionHeader, fontBold, sectionHeaderSize, contentWidth - 40);
       
       for (const sectionLine of sectionLines) {
-        if (y < marginBottom) {
+        if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
           context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
           // Redraw top accent bar on new page
           const accentBarHeight = 8;
@@ -103,7 +105,7 @@ function renderBodyContentTemplate1(
           
           const titleLines = wrapText(jobTitle.trim(), fontBold, bodySize + 1.5, contentWidth - 20);
           for (const titleLine of titleLines) {
-            if (y < marginBottom) {
+            if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               const accentBarHeight = 8;
               context.page.drawRectangle({
@@ -125,7 +127,7 @@ function renderBodyContentTemplate1(
           const companyPeriodLine = `${companyInfo}  •  ${formattedPeriod}`;
           const companyPeriodLines = wrapText(companyPeriodLine, font, bodySize, contentWidth - 20);
           for (const line of companyPeriodLines) {
-            if (y < marginBottom) {
+            if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               const accentBarHeight = 8;
               context.page.drawRectangle({
@@ -148,7 +150,7 @@ function renderBodyContentTemplate1(
           const edu = parseEducationThreePartLine(line);
           if (edu) {
             const ensurePageSpace = () => {
-              if (y >= marginBottom) return;
+              if (baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) return;
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               const accentBarHeight = 8;
               context.page.drawRectangle({
@@ -192,7 +194,7 @@ function renderBodyContentTemplate1(
           const wrapped = wrapText(lineWithoutBullet, font, bodySize, contentWidth - 20);
           
           for (const lineText of wrapped) {
-            if (y < marginBottom) {
+            if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               const accentBarHeight = 8;
               context.page.drawRectangle({
@@ -246,7 +248,7 @@ function renderBodyContentTemplate1(
             
             let currentX = left + 15;
             
-            if (y < marginBottom) {
+            if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               const accentBarHeight = 8;
               context.page.drawRectangle({
@@ -288,7 +290,7 @@ function renderBodyContentTemplate1(
               
               for (let i = 1; i < wrappedSkills.length; i++) {
                 y -= bodyLineHeight;
-                if (y < marginBottom) {
+                if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
                   context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
                   const accentBarHeight = 8;
                   context.page.drawRectangle({
@@ -329,7 +331,7 @@ function renderBodyContentTemplate1(
             let contentStartX = left + 15 + bulletWidth;
             
             for (let i = 0; i < wrapped.lines.length; i++) {
-              if (y < marginBottom) {
+              if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
                 context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
                 const accentBarHeight = 8;
                 context.page.drawRectangle({
@@ -373,7 +375,7 @@ function renderBodyContentTemplate1(
       }
     }
     
-    if (y < marginBottom) {
+    if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
       context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
       const accentBarHeight = 8;
       context.page.drawRectangle({
@@ -401,7 +403,7 @@ export async function renderTemplate1(context: TemplateContext): Promise<Uint8Ar
   const ACCENT_BAR_HEIGHT = 8;
   const HEADER_HEIGHT = 110;
   const MARGIN_TOP = 85;
-  const MARGIN_BOTTOM = 50;
+  const MARGIN_BOTTOM = RESUME_PAGE_BOTTOM_MARGIN;
   const MARGIN_LEFT = 35;
   const MARGIN_RIGHT = 35;
   const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;

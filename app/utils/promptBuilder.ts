@@ -173,6 +173,7 @@ INPUT
 
 PROFILE: \${profileData}
 JOB DESCRIPTION: \${jobDescription}
+PLANNER OUTPUT: \${plannerOutput}
 DOMAIN: \${domain}
 HEADLINE: \${headline}
 ROLE PLAN: \${roles}
@@ -503,6 +504,67 @@ export function extractRoleTitlesFromProfile(profileData: string): string[] {
   return out;
 }
 
+function extractJsonFromText(raw: string): string {
+  const trimmed = raw.trim();
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch?.[1]) return fenceMatch[1].trim();
+  const braceStart = trimmed.indexOf('{');
+  const braceEnd = trimmed.lastIndexOf('}');
+  if (braceStart !== -1 && braceEnd > braceStart) {
+    return trimmed.slice(braceStart, braceEnd + 1);
+  }
+  return trimmed;
+}
+
+function parseStage2Role(role: unknown): Stage2Role | null {
+  if (typeof role === 'string') {
+    const title = role.trim();
+    if (!title) return null;
+    return { original_title: title, normalized_title: title, adapted_title: title };
+  }
+  if (role && typeof role === 'object') {
+    const r = role as Record<string, unknown>;
+    const original = String(r.original_title ?? r.originalTitle ?? '').trim();
+    const normalized = String(r.normalized_title ?? r.normalizedTitle ?? original).trim();
+    const adapted = String(r.adapted_title ?? r.adaptedTitle ?? normalized).trim();
+    if (!original && !normalized && !adapted) return null;
+    return {
+      original_title: original || normalized || adapted,
+      normalized_title: normalized || original || adapted,
+      adapted_title: adapted || normalized || original,
+    };
+  }
+  return null;
+}
+
+export function parseStage1Output(raw: string): Stage1Output | null {
+  if (!raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(extractJsonFromText(raw)) as Record<string, unknown>;
+    const domain = String(parsed.domain ?? '').trim();
+    const headline = String(parsed.headline ?? '').trim();
+    const seniority = String(parsed.seniority ?? '').trim();
+    if (!domain || !headline) return null;
+
+    const roles: Stage2Role[] = [];
+    if (Array.isArray(parsed.roles)) {
+      for (const role of parsed.roles) {
+        const parsedRole = parseStage2Role(role);
+        if (parsedRole) roles.push(parsedRole);
+      }
+    }
+
+    return {
+      domain,
+      headline,
+      seniority: seniority || 'Senior',
+      roles,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function buildFallbackStage1Output(profileData: string, targetTitle?: string): Stage1Output {
   const fallbackHeadline =
     targetTitle != null && String(targetTitle).trim() !== ''
@@ -538,7 +600,8 @@ function applyPromptPlaceholders(
   titleForPrompt: string,
   stage1Output?: Stage1Output,
   stage2Output?: Stage2Output,
-  stage3Output?: Stage3Output
+  stage3Output?: Stage3Output,
+  plannerOutput?: string
 ): string {
   const expCount = String(experienceCountFromResumeText(profileData));
   const roles =
@@ -560,25 +623,23 @@ function applyPromptPlaceholders(
   out = substituteLiteral(out, '${seniority}', stage1Output?.seniority ?? '');
   out = substituteLiteral(out, '${roles}', rolesJson);
   out = substituteLiteral(out, '${contentJson}', contentJson);
+  out = substituteLiteral(out, '${plannerOutput}', plannerOutput ?? '');
   return out;
 }
 
 export function buildStage1Prompt(
   profileData: string,
   jobDescription: string,
-  customStage1Prompt?: string,
+  promptTemplate?: string,
   targetTitle?: string
 ) {
   const jobDescWrapped = `{${jobDescription}}`;
   const titleForPrompt = (targetTitle != null && String(targetTitle).trim() !== ''
     ? String(targetTitle).trim()
     : DEFAULT_TARGET_TITLE);
+  const template = promptTemplate?.trim() || DEFAULT_STAGE1_PROMPT_TEMPLATE;
 
-  if (customStage1Prompt) {
-    return applyPromptPlaceholders(customStage1Prompt, profileData, jobDescWrapped, titleForPrompt);
-  }
-
-  return applyPromptPlaceholders(DEFAULT_STAGE1_PROMPT_TEMPLATE, profileData, jobDescWrapped, titleForPrompt);
+  return applyPromptPlaceholders(template, profileData, jobDescWrapped, titleForPrompt);
 }
 
 export function buildStage3Prompt(
@@ -586,32 +647,29 @@ export function buildStage3Prompt(
   jobDescription: string,
   stage1Output: Stage1Output,
   stage2Output?: Stage2Output,
-  customStage3Prompt?: string,
-  targetTitle?: string
+  promptTemplate?: string,
+  targetTitle?: string,
+  plannerOutput?: string
 ) {
   const jobDescWrapped = `{${jobDescription}}`;
   const titleForPrompt = (targetTitle != null && String(targetTitle).trim() !== ''
     ? String(targetTitle).trim()
     : DEFAULT_TARGET_TITLE);
-
-  if (customStage3Prompt) {
-    return applyPromptPlaceholders(
-      customStage3Prompt,
-      profileData,
-      jobDescWrapped,
-      titleForPrompt,
-      stage1Output,
-      stage2Output
-    );
-  }
+  const template = promptTemplate?.trim() || DEFAULT_STAGE3_PROMPT_TEMPLATE;
+  const stage1ForPrompt: Stage1Output = {
+    ...stage1Output,
+    headline: titleForPrompt,
+  };
 
   return applyPromptPlaceholders(
-    DEFAULT_STAGE3_PROMPT_TEMPLATE,
+    template,
     profileData,
     jobDescWrapped,
     titleForPrompt,
-    stage1Output,
-    stage2Output
+    stage1ForPrompt,
+    stage2Output,
+    undefined,
+    plannerOutput
   );
 }
 

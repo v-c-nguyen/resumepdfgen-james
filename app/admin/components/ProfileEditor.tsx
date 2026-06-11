@@ -3,14 +3,11 @@ import { useState, useEffect } from 'react';
 import { BaseResumeProfile } from '@/app/data/baseResumes';
 import { DEFAULT_RESUME_TEXT_TEMPLATE } from '@/app/data/defaultResumeTemplate';
 import { PDF_TEMPLATE_IDS } from '@/app/data/pdfTemplateIds';
-import {
-  DEFAULT_STAGE1_PROMPT_TEMPLATE,
-  DEFAULT_STAGE3_PROMPT_TEMPLATE,
-  QA_PROMPT_TEMPLATE,
-} from '@/app/utils/promptBuilder';
+import type { DefaultPrompts } from '@/lib/defaultPrompts';
 
 interface ProfileEditorProps {
   profiles: BaseResumeProfile[];
+  defaultPrompts: DefaultPrompts;
   onUpdate: () => void;
 }
 
@@ -20,7 +17,7 @@ interface TemplateOption {
   usageCount?: number;
 }
 
-export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps) {
+export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: ProfileEditorProps) {
   const [selectedProfileName, setSelectedProfileName] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState<BaseResumeProfile | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -250,8 +247,8 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
 
   // If editing, show the edit form
   if (editingProfile) {
-    const currentStage1Prompt = editingProfile.customStage1Prompt || DEFAULT_STAGE1_PROMPT_TEMPLATE;
-    const currentStage3Prompt = editingProfile.customStage3Prompt || DEFAULT_STAGE3_PROMPT_TEMPLATE;
+    const currentStage1Prompt = editingProfile.customStage1Prompt || defaultPrompts.stage1Prompt;
+    const currentStage3Prompt = editingProfile.customStage3Prompt || defaultPrompts.stage2Prompt;
 
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
@@ -595,7 +592,7 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                   value={currentStage1Prompt}
                   onChange={(e) => {
                     const newPrompt = e.target.value;
-                    if (newPrompt !== DEFAULT_STAGE1_PROMPT_TEMPLATE) {
+                    if (newPrompt !== defaultPrompts.stage1Prompt) {
                       setEditingProfile({
                         ...editingProfile,
                         customStage1Prompt: newPrompt
@@ -637,7 +634,7 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                   value={currentStage3Prompt}
                   onChange={(e) => {
                     const newPrompt = e.target.value;
-                    if (newPrompt !== DEFAULT_STAGE3_PROMPT_TEMPLATE) {
+                    if (newPrompt !== defaultPrompts.stage2Prompt) {
                       setEditingProfile({ ...editingProfile, customStage3Prompt: newPrompt });
                     } else {
                       setEditingProfile({ ...editingProfile, customStage3Prompt: undefined });
@@ -662,13 +659,13 @@ export default function ProfileEditor({ profiles, onUpdate }: ProfileEditorProps
                   <label className="block text-sm font-medium text-gray-700">QA Prompt</label>
                 </div>
                 <textarea
-                  value={QA_PROMPT_TEMPLATE}
+                  value={defaultPrompts.qaPrompt}
                   readOnly
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-900"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  Shared QA prompt used by the main page &quot;Generate QA prompt&quot; button.
+                  Shared QA prompt used by the main page &quot;QA prompt&quot; button. Edit it in Default Prompts.
                 </p>
               </div>
             </div>

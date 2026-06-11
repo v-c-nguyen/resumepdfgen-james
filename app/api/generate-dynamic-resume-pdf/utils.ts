@@ -16,6 +16,21 @@ export interface TemplateContext {
   PAGE_HEIGHT: number;
 }
 
+/** Minimum clear space reserved from the physical bottom of the page (points). */
+export const RESUME_PAGE_BOTTOM_MARGIN = 50;
+
+/** Whether a text line can be drawn at baselineY without crossing the bottom margin.
+ * We intentionally reserve only a fraction of `lineHeight` under the baseline, because
+ * `lineHeight` in these templates is mostly leading between baselines, not exact glyph height.
+ */
+export function baselineFitsAboveBottomMargin(
+  baselineY: number,
+  marginBottom: number,
+  lineHeight: number
+): boolean {
+  return baselineY - lineHeight * 0.25 >= marginBottom;
+}
+
 // Validation helpers
 function isValidEmail(text: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

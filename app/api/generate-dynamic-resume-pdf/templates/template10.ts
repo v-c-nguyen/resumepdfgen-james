@@ -12,6 +12,8 @@ import {
   wrapSkillsAfterCategory,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  baselineFitsAboveBottomMargin,
+  RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
 
 const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT;
@@ -75,8 +77,8 @@ function renderBodyContentTemplate10(
     }
   };
 
-  const ensurePageSpace = () => {
-    if (y >= marginBottom) return;
+  const ensurePageSpace = (requiredHeight: number = bodyLineHeight) => {
+    if (baselineFitsAboveBottomMargin(y, marginBottom, requiredHeight)) return;
     context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     y = PAGE_HEIGHT - pageTopOffset - 8;
   };
@@ -335,7 +337,7 @@ export async function renderTemplate10(context: TemplateContext): Promise<Uint8A
   const HEADER_BG = rgb(0.975, 0.978, 0.985);
   const DIVIDER = rgb(0.84, 0.86, 0.9);
   const HEADER_HEIGHT = 102;
-  const MARGIN_BOTTOM = 48;
+  const MARGIN_BOTTOM = RESUME_PAGE_BOTTOM_MARGIN;
   const MARGIN_LEFT = 34;
   const MARGIN_RIGHT = 34;
   const CONTENT_LEFT = MARGIN_LEFT;

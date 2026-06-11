@@ -33,6 +33,16 @@ model Profile {
   @@map("profiles")
 }
 
+model DefaultPromptSettings {
+  id           String   @id @default("default")
+  stage1Prompt String?  @db.Text
+  stage2Prompt String?  @db.Text
+  qaPrompt     String?  @db.Text
+  updatedAt    DateTime @updatedAt
+
+  @@map("default_prompt_settings")
+}
+
 model ResumeGenerationLog {
   id             String   @id @default(cuid())
   profileName    String?

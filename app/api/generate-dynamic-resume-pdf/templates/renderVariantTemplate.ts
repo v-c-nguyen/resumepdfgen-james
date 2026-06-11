@@ -11,6 +11,7 @@ import {
   wrapSkillsAfterCategory,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  baselineFitsAboveBottomMargin,
 } from '../utils';
 
 type VariantKind = 'slate' | 'midnight' | 'emerald' | 'mono' | 'sunset';
@@ -253,8 +254,8 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
             : rgb(0.11, 0.46, 0.34)
           : rgb(0.22, 0.27, 0.36);
 
-  const ensurePageSpace = () => {
-    if (y >= config.marginBottom) return;
+  const ensurePageSpace = (requiredHeight: number = bodyLineHeight) => {
+    if (baselineFitsAboveBottomMargin(y, config.marginBottom, requiredHeight)) return;
     context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     y = PAGE_HEIGHT - 74;
   };
@@ -295,10 +296,11 @@ function renderBody(context: TemplateContext, config: VariantConfig, serifFont: 
     }
     const isSectionHeader = line.endsWith(':') || /^(summary|education|experience|technical skills|skills|professional experience)$/i.test(line);
     if (isSectionHeader) {
+      const sectionBlockHeight = 14 + sectionLineHeight + 8;
+      ensurePageSpace(sectionBlockHeight);
       y -= 14;
       const sectionHeader = line.endsWith(':') ? line.slice(0, -1).trim() : line.trim();
       currentSection = sectionHeader.toLowerCase();
-      ensurePageSpace();
       context.page.drawRectangle({
         x: left,
         y: y - sectionLineHeight + 4,

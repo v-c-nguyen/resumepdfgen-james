@@ -11,6 +11,8 @@ import {
   wrapSkillsAfterCategory,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  baselineFitsAboveBottomMargin,
+  RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
 
 // Template 5 Body Content Renderer - Right-aligned header design
@@ -52,7 +54,7 @@ function renderBodyContentTemplate5(
       const sectionLines = wrapText(sectionHeader, fontBold, sectionHeaderSize, contentWidth - 40);
       
       for (const sectionLine of sectionLines) {
-        if (y < marginBottom) {
+        if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
           context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
           y = PAGE_HEIGHT - 80;
         }
@@ -93,7 +95,7 @@ function renderBodyContentTemplate5(
           
           const titleLines = wrapText(jobTitle.trim(), fontBold, bodySize + 1.5, contentWidth - 20);
           for (const titleLine of titleLines) {
-            if (y < marginBottom) {
+            if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               y = PAGE_HEIGHT - 80;
             }
@@ -107,7 +109,7 @@ function renderBodyContentTemplate5(
           const companyPeriodLine = `${companyInfo}  |  ${formattedPeriod}`;
           const companyPeriodLines = wrapText(companyPeriodLine, font, bodySize, contentWidth - 20);
           for (const line of companyPeriodLines) {
-            if (y < marginBottom) {
+            if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               y = PAGE_HEIGHT - 80;
             }
@@ -155,7 +157,7 @@ function renderBodyContentTemplate5(
             
             let currentX = left + 15;
             
-            if (y < marginBottom) {
+            if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
               context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
               y = PAGE_HEIGHT - 80;
             }
@@ -189,7 +191,7 @@ function renderBodyContentTemplate5(
               
               for (let i = 1; i < wrappedSkills.length; i++) {
                 y -= bodyLineHeight;
-                if (y < marginBottom) {
+                if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
                   context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
                   y = PAGE_HEIGHT - 80;
                 }
@@ -209,7 +211,7 @@ function renderBodyContentTemplate5(
             const edu = parseEducationThreePartLine(line);
             if (edu) {
               const ensurePageSpace = () => {
-                if (y >= marginBottom) return;
+                if (baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) return;
                 context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
                 y = PAGE_HEIGHT - 80;
               };
@@ -245,7 +247,7 @@ function renderBodyContentTemplate5(
             const wrapped = wrapText(lineWithoutBullet, font, bodySize, contentWidth - 20);
             
             for (const lineText of wrapped) {
-              if (y < marginBottom) {
+              if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
                 context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
                 y = PAGE_HEIGHT - 80;
               }
@@ -271,7 +273,7 @@ function renderBodyContentTemplate5(
             let contentStartX = left + 15 + bulletWidth;
             
             for (let i = 0; i < wrapped.lines.length; i++) {
-              if (y < marginBottom) {
+              if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
                 context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
                 y = PAGE_HEIGHT - 80;
               }
@@ -307,7 +309,7 @@ function renderBodyContentTemplate5(
       }
     }
     
-    if (y < marginBottom) {
+    if (!baselineFitsAboveBottomMargin(y, marginBottom, bodyLineHeight)) {
       context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
       y = PAGE_HEIGHT - 80;
     }
@@ -324,7 +326,7 @@ export async function renderTemplate5(context: TemplateContext): Promise<Uint8Ar
   const SAGE = rgb(0.5, 0.6, 0.5);
   
   const MARGIN_TOP = 55;
-  const MARGIN_BOTTOM = 50;
+  const MARGIN_BOTTOM = RESUME_PAGE_BOTTOM_MARGIN;
   const MARGIN_LEFT = 40;
   const MARGIN_RIGHT = 40;
   const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;

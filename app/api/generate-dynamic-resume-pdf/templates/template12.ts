@@ -12,6 +12,8 @@ import {
   wrapTextWithIndent,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  baselineFitsAboveBottomMargin,
+  RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
 
 const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT;
@@ -75,7 +77,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
   const PAGE_MARGIN = 46;
   const contentX = PAGE_MARGIN;
   const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
-  const BOTTOM_MARGIN = 48;
+  const BOTTOM_MARGIN = RESUME_PAGE_BOTTOM_MARGIN;
 
   const PAPER = rgb(0.99, 0.978, 0.958);
   const INK = rgb(0.14, 0.12, 0.11);
@@ -150,8 +152,8 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
     currentSection === 'experience' || currentSection === 'professional experience';
   const sectionIsSkills = () => currentSection === 'technical skills' || currentSection === 'skills';
 
-  const ensurePageSpace = () => {
-    if (y >= BOTTOM_MARGIN) return;
+  const ensurePageSpace = (requiredHeight: number = lineHeight) => {
+    if (baselineFitsAboveBottomMargin(y, BOTTOM_MARGIN, requiredHeight)) return;
     context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     paintPage();
     y = PAGE_HEIGHT - PAGE_MARGIN - 12;
@@ -163,7 +165,7 @@ export async function renderTemplate12(context: TemplateContext): Promise<Uint8A
     const prefix = `${upper}  `;
     const sectionHeaderSize = 11.36;
     const prefixW = fontBold.widthOfTextAtSize(prefix, sectionHeaderSize);
-    ensurePageSpace();
+    ensurePageSpace(sectionHeaderSize);
     context.page.drawText(prefix, { x: contentX, y, size: sectionHeaderSize, font: fontBold, color: INK });
     const ruleY = y - 3.2;
     context.page.drawLine({

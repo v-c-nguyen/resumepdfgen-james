@@ -11,6 +11,8 @@ import {
   PDF_BULLET_DOT,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  baselineFitsAboveBottomMargin,
+  RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
 
 const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT;
@@ -37,7 +39,7 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const PAGE_MARGIN = 35;
-  const BOTTOM_MARGIN = 42;
+  const BOTTOM_MARGIN = RESUME_PAGE_BOTTOM_MARGIN;
   const HEADER_HEIGHT = 90;
   const contentX = PAGE_MARGIN;
   const contentWidth = PAGE_WIDTH - PAGE_MARGIN * 2;
@@ -106,8 +108,8 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
   const SKILLS_ROW_EXTRA_GAP = 1.2;
 
   const bodyLines = body.split('\n');
-  const ensurePageSpace = () => {
-    if (y >= BOTTOM_MARGIN) return;
+  const ensurePageSpace = (requiredHeight: number = lineHeight) => {
+    if (baselineFitsAboveBottomMargin(y, BOTTOM_MARGIN, requiredHeight)) return;
     context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     context.page.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, color: PAPER });
     drawTopRule(context, contentX, contentX + contentWidth, PAGE_HEIGHT - PAGE_MARGIN + 4);

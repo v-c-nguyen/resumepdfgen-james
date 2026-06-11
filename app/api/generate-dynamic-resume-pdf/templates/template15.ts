@@ -11,6 +11,8 @@ import {
   parseEducationThreePartLine,
   drawEducationTwoRows,
   PDF_BULLET_DOT,
+  baselineFitsAboveBottomMargin,
+  RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
 
 const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT;
@@ -66,7 +68,7 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
   const MARGIN = 44;
   const LEFT_X = MARGIN;
   const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-  const BOTTOM = 50;
+  const BOTTOM = RESUME_PAGE_BOTTOM_MARGIN;
   const bodyLineHeight = 14.9;
   const sectionHeaderSize = 9.95;
   const bodySize = 10.05;
@@ -114,8 +116,8 @@ export async function renderTemplate15(context: TemplateContext): Promise<Uint8A
   }
 
   let y = contentStartY;
-  const ensurePage = () => {
-    if (y >= BOTTOM + 10) return;
+  const ensurePage = (requiredHeight: number = bodyLineHeight) => {
+    if (baselineFitsAboveBottomMargin(y, BOTTOM, requiredHeight)) return;
     context.page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     y = PAGE_HEIGHT - 76;
   };
