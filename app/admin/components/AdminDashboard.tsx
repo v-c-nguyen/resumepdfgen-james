@@ -7,6 +7,7 @@ import {
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
   QA_PROMPT_TEMPLATE,
+  COVER_LETTER_PROMPT_TEMPLATE,
 } from '@/app/utils/promptBuilder';
 import type { DefaultPrompts } from '@/lib/defaultPrompts';
 
@@ -23,6 +24,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     stage1Prompt: DEFAULT_STAGE1_PROMPT_TEMPLATE,
     stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
     qaPrompt: QA_PROMPT_TEMPLATE,
+    coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
   });
   const [loading, setLoading] = useState(true);
 

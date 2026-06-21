@@ -3,9 +3,12 @@ import { useRef, useEffect, useState } from 'react';
 import { Copy, Check, Mail, Phone, MapPin, Linkedin, Sparkles, FileDown } from 'lucide-react';
 import { BaseResumeProfile } from './data/baseResumes';
 import {
+  buildCoverLetterPrompt,
   buildFallbackStage1Output,
   buildStage1Prompt,
   buildStage3Prompt,
+  COVER_LETTER_PROMPT_TEMPLATE,
+  CoverLetterSubmissionType,
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
   extractRoleTitlesFromProfile,
@@ -191,7 +194,11 @@ export default function Home() {
     stage1Prompt: DEFAULT_STAGE1_PROMPT_TEMPLATE,
     stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
     qaPrompt: QA_PROMPT_TEMPLATE,
+    coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
   });
+  const [showCoverLetterPicker, setShowCoverLetterPicker] = useState(false);
+  const [coverLetterSubmissionType, setCoverLetterSubmissionType] =
+    useState<CoverLetterSubmissionType>('Manual_Text_Input');
 
   const effectiveProfileName = selectedProfileName || baseResumes[0]?.name;
   const selectedProfile = baseResumes.find((p) => p.name === effectiveProfileName);
@@ -326,6 +333,15 @@ export default function Home() {
 
   const handleGenerateQaPrompt = async () => {
     await copyPromptToClipboard(defaultPrompts.qaPrompt, 'QA prompt copied');
+  };
+
+  const handleGenerateCoverLetterPrompt = async () => {
+    const promptText = buildCoverLetterPrompt(
+      defaultPrompts.coverLetterPrompt,
+      coverLetterSubmissionType
+    );
+    await copyPromptToClipboard(promptText, 'Cover letter prompt copied');
+    setShowCoverLetterPicker(false);
   };
 
   const inputClass =
@@ -471,7 +487,7 @@ export default function Home() {
                   className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
                 >
                   <Sparkles className="size-4 shrink-0" />
-                  Stage 1 prompt
+                  Stage 1
                 </button>
               )}
               <button
@@ -480,7 +496,7 @@ export default function Home() {
                 className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
               >
                 <Sparkles className="size-4 shrink-0" />
-                Stage 2 prompt
+                Stage 2
               </button>
               <button
                 type="button"
@@ -488,7 +504,15 @@ export default function Home() {
                 className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
               >
                 <Sparkles className="size-4 shrink-0" />
-                QA prompt
+                QA
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCoverLetterPicker(true)}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+              >
+                <Sparkles className="size-4 shrink-0" />
+                Cover letter
               </button>
               {promptCopied && (
                 <span className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md py-1 px-2 animate-copy-in">
@@ -610,15 +634,73 @@ export default function Home() {
 
           <input type="hidden" name="jd_text" value={jobDescriptionForPrompt} />
 
-          <button
-            type="submit"
-            className={`w-full inline-flex items-center justify-center gap-2 bg-zinc-900 text-white font-medium py-2 rounded-md hover:bg-zinc-800 border-2 border-zinc-900 hover:border-zinc-800 shadow-sm ${btnMotion}`}
-          >
-            <FileDown className="size-4 shrink-0" />
-            Generate PDF
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="submit"
+              className={`inline-flex items-center justify-center gap-2 bg-zinc-900 text-white font-medium py-2 rounded-md hover:bg-zinc-800 border-2 border-zinc-900 hover:border-zinc-800 shadow-sm ${btnMotion}`}
+            >
+              <FileDown className="size-4 shrink-0" />
+              Generate PDF
+            </button>
+            <button
+              type="submit"
+              formAction="/api/generate-cover-letter-pdf"
+              className={`inline-flex items-center justify-center gap-2 bg-zinc-200 text-zinc-800 font-medium py-2 rounded-md hover:bg-zinc-300 border border-zinc-300 hover:border-zinc-400 shadow-sm ${btnMotion}`}
+            >
+              <FileDown className="size-4 shrink-0" />
+              Cover letter PDF
+            </button>
+          </div>
         </form>
       </div>
+
+      {showCoverLetterPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowCoverLetterPicker(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg border border-zinc-300 bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-zinc-900 mb-1">Cover letter prompt</h2>
+            <p className="text-sm text-zinc-600 mb-4">
+              Choose how the job description and resume will be submitted.
+            </p>
+            <label className={labelClass} htmlFor="cover-letter-submission-type">
+              Submission type
+            </label>
+            <select
+              id="cover-letter-submission-type"
+              value={coverLetterSubmissionType}
+              onChange={(e) =>
+                setCoverLetterSubmissionType(e.target.value as CoverLetterSubmissionType)
+              }
+              className={`${inputClass} mb-4`}
+            >
+              <option value="Manual_Text_Input">Manual_Text_Input</option>
+              <option value="PDF_Document">PDF_Document</option>
+            </select>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleGenerateCoverLetterPrompt}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-medium bg-zinc-900 text-white rounded-md py-2 px-3 hover:bg-zinc-800 ${btnMotion}`}
+              >
+                <Sparkles className="size-4 shrink-0" />
+                Copy prompt
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCoverLetterPicker(false)}
+                className={`px-4 text-sm font-medium bg-zinc-100 text-zinc-800 border border-zinc-300 rounded-md py-2 hover:bg-zinc-200 ${btnMotion}`}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

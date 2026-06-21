@@ -668,6 +668,21 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
                   Shared QA prompt used by the main page &quot;QA prompt&quot; button. Edit it in Default Prompts.
                 </p>
               </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Cover Letter Prompt</label>
+                </div>
+                <textarea
+                  value={defaultPrompts.coverLetterPrompt}
+                  readOnly
+                  rows={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-900"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Shared cover letter prompt used by the main page &quot;Cover letter prompt&quot; button. Edit it in Default Prompts. Placeholder: {'${Submission_Type}'}.
+                </p>
+              </div>
             </div>
           </div>
 

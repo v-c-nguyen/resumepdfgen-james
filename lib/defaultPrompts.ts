@@ -3,18 +3,21 @@ import {
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
   QA_PROMPT_TEMPLATE,
+  COVER_LETTER_PROMPT_TEMPLATE,
 } from '@/app/utils/promptBuilder';
 
 export type DefaultPrompts = {
   stage1Prompt: string;
   stage2Prompt: string;
   qaPrompt: string;
+  coverLetterPrompt: string;
 };
 
 export type DefaultPromptOverrides = {
   stage1Prompt: string | null;
   stage2Prompt: string | null;
   qaPrompt: string | null;
+  coverLetterPrompt: string | null;
 };
 
 export function getCodeDefaultPrompts(): DefaultPrompts {
@@ -22,6 +25,7 @@ export function getCodeDefaultPrompts(): DefaultPrompts {
     stage1Prompt: DEFAULT_STAGE1_PROMPT_TEMPLATE,
     stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
     qaPrompt: QA_PROMPT_TEMPLATE,
+    coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
   };
 }
 
@@ -31,6 +35,7 @@ export function resolveDefaultPrompts(overrides?: Partial<DefaultPromptOverrides
     stage1Prompt: overrides?.stage1Prompt?.trim() || codeDefaults.stage1Prompt,
     stage2Prompt: overrides?.stage2Prompt?.trim() || codeDefaults.stage2Prompt,
     qaPrompt: overrides?.qaPrompt?.trim() || codeDefaults.qaPrompt,
+    coverLetterPrompt: overrides?.coverLetterPrompt?.trim() || codeDefaults.coverLetterPrompt,
   };
 }
 
@@ -41,6 +46,7 @@ export async function getDefaultPrompts(): Promise<DefaultPrompts> {
       stage1Prompt: true,
       stage2Prompt: true,
       qaPrompt: true,
+      coverLetterPrompt: true,
     },
   });
 
@@ -59,6 +65,7 @@ export async function getDefaultPromptSettings(): Promise<{
       stage1Prompt: true,
       stage2Prompt: true,
       qaPrompt: true,
+      coverLetterPrompt: true,
     },
   });
 
@@ -66,6 +73,7 @@ export async function getDefaultPromptSettings(): Promise<{
     stage1Prompt: settings?.stage1Prompt ?? null,
     stage2Prompt: settings?.stage2Prompt ?? null,
     qaPrompt: settings?.qaPrompt ?? null,
+    coverLetterPrompt: settings?.coverLetterPrompt ?? null,
   };
 
   return {
@@ -87,6 +95,9 @@ export async function updateDefaultPrompts(input: Partial<DefaultPromptOverrides
   if ('qaPrompt' in input) {
     data.qaPrompt = input.qaPrompt?.trim() ? input.qaPrompt.trim() : null;
   }
+  if ('coverLetterPrompt' in input) {
+    data.coverLetterPrompt = input.coverLetterPrompt?.trim() ? input.coverLetterPrompt.trim() : null;
+  }
 
   const settings = await prisma.defaultPromptSettings.upsert({
     where: { id: 'default' },
@@ -95,12 +106,14 @@ export async function updateDefaultPrompts(input: Partial<DefaultPromptOverrides
       stage1Prompt: data.stage1Prompt ?? null,
       stage2Prompt: data.stage2Prompt ?? null,
       qaPrompt: data.qaPrompt ?? null,
+      coverLetterPrompt: data.coverLetterPrompt ?? null,
     },
     update: data,
     select: {
       stage1Prompt: true,
       stage2Prompt: true,
       qaPrompt: true,
+      coverLetterPrompt: true,
     },
   });
 

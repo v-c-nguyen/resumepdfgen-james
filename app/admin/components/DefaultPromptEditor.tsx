@@ -5,21 +5,24 @@ import {
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
   QA_PROMPT_TEMPLATE,
+  COVER_LETTER_PROMPT_TEMPLATE,
 } from '@/app/utils/promptBuilder';
 import type { DefaultPrompts } from '@/lib/defaultPrompts';
 
-type PromptKey = 'stage1Prompt' | 'stage2Prompt' | 'qaPrompt';
+type PromptKey = 'stage1Prompt' | 'stage2Prompt' | 'qaPrompt' | 'coverLetterPrompt';
 
 const PROMPT_TABS: { key: PromptKey; label: string }[] = [
   { key: 'stage1Prompt', label: 'Stage 1 Prompt' },
   { key: 'stage2Prompt', label: 'Stage 2 Prompt' },
   { key: 'qaPrompt', label: 'QA Prompt' },
+  { key: 'coverLetterPrompt', label: 'Cover Letter Prompt' },
 ];
 
 const CODE_DEFAULTS: DefaultPrompts = {
   stage1Prompt: DEFAULT_STAGE1_PROMPT_TEMPLATE,
   stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
   qaPrompt: QA_PROMPT_TEMPLATE,
+  coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
 };
 
 const PLACEHOLDER_NOTES: Record<PromptKey, string> = {
@@ -28,6 +31,8 @@ const PLACEHOLDER_NOTES: Record<PromptKey, string> = {
   stage2Prompt:
     'Placeholders: ${profileData}, ${jobDescription}, ${plannerOutput}, ${domain}, ${headline}, ${roles}, ${experienceCount}, ${targetTitle}',
   qaPrompt: 'Shared QA prompt copied by the main page QA button.',
+  coverLetterPrompt:
+    'Placeholders: ${Submission_Type} (Manual_Text_Input or PDF_Document). Copied by the main page Cover letter prompt button.',
 };
 
 interface DefaultPromptEditorProps {
@@ -42,6 +47,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
     stage1Prompt: false,
     stage2Prompt: false,
     qaPrompt: false,
+    coverLetterPrompt: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,6 +71,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
         stage1Prompt: !!data.overrides?.stage1Prompt,
         stage2Prompt: !!data.overrides?.stage2Prompt,
         qaPrompt: !!data.overrides?.qaPrompt,
+        coverLetterPrompt: !!data.overrides?.coverLetterPrompt,
       });
     } catch {
       setError('Failed to load default prompts');
@@ -104,6 +111,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
         stage1Prompt: !!data.overrides?.stage1Prompt,
         stage2Prompt: !!data.overrides?.stage2Prompt,
         qaPrompt: !!data.overrides?.qaPrompt,
+        coverLetterPrompt: !!data.overrides?.coverLetterPrompt,
       });
       setSuccess('Default prompts saved successfully.');
       setTimeout(() => setSuccess(''), 3000);
@@ -140,6 +148,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
         stage1Prompt: !!data.overrides?.stage1Prompt,
         stage2Prompt: !!data.overrides?.stage2Prompt,
         qaPrompt: !!data.overrides?.qaPrompt,
+        coverLetterPrompt: !!data.overrides?.coverLetterPrompt,
       });
       setSuccess('Prompt reset to built-in default.');
       setTimeout(() => setSuccess(''), 3000);
@@ -232,7 +241,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
               [activePrompt]: e.target.value,
             }))
           }
-          rows={activePrompt === 'qaPrompt' ? 8 : 20}
+          rows={activePrompt === 'qaPrompt' || activePrompt === 'coverLetterPrompt' ? 12 : 20}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
         />
         <p className="mt-2 text-xs text-gray-500">

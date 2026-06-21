@@ -35,10 +35,11 @@ model Profile {
 
 model DefaultPromptSettings {
   id           String   @id @default("default")
-  stage1Prompt String?  @db.Text
-  stage2Prompt String?  @db.Text
-  qaPrompt     String?  @db.Text
-  updatedAt    DateTime @updatedAt
+  stage1Prompt       String?  @db.Text
+  stage2Prompt       String?  @db.Text
+  qaPrompt           String?  @db.Text
+  coverLetterPrompt  String?  @db.Text
+  updatedAt          DateTime @updatedAt
 
   @@map("default_prompt_settings")
 }

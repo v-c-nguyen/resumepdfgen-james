@@ -439,6 +439,30 @@ export const QA_PROMPT_TEMPLATE =
 
 const DEFAULT_TARGET_TITLE = 'Senior Software Engineer';
 
+export type CoverLetterSubmissionType = 'Manual_Text_Input' | 'PDF_Document';
+
+export const COVER_LETTER_PROMPT_TEMPLATE = `
+Write a tailored cover letter for this job application.
+
+Submission type: \${Submission_Type}
+
+If Submission_Type is Manual_Text_Input, use the job description and resume text provided in the conversation.
+If Submission_Type is PDF_Document, use the uploaded PDF documents for the job description and resume.
+
+Requirements:
+- Match the role and company from the job description
+- Highlight relevant experience from the resume only
+- Professional tone, 3–4 concise paragraphs
+- Do not invent facts not supported by the resume
+`.trim();
+
+export function buildCoverLetterPrompt(
+  template: string,
+  submissionType: CoverLetterSubmissionType = 'Manual_Text_Input'
+): string {
+  return template.replace(/\$\{Submission_Type\}/g, submissionType);
+}
+
 export type Stage2Role = {
   original_title: string;
   normalized_title: string;
