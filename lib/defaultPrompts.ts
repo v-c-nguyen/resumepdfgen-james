@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import {
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
+  DEFAULT_RESUME_PROMPT_TEMPLATE,
   QA_PROMPT_TEMPLATE,
   COVER_LETTER_PROMPT_TEMPLATE,
 } from '@/app/utils/promptBuilder';
@@ -11,6 +12,7 @@ export type DefaultPrompts = {
   stage2Prompt: string;
   qaPrompt: string;
   coverLetterPrompt: string;
+  resumePrompt: string;
 };
 
 export type DefaultPromptOverrides = {
@@ -18,6 +20,7 @@ export type DefaultPromptOverrides = {
   stage2Prompt: string | null;
   qaPrompt: string | null;
   coverLetterPrompt: string | null;
+  resumePrompt: string | null;
 };
 
 export function getCodeDefaultPrompts(): DefaultPrompts {
@@ -26,6 +29,7 @@ export function getCodeDefaultPrompts(): DefaultPrompts {
     stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
     qaPrompt: QA_PROMPT_TEMPLATE,
     coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
+    resumePrompt: DEFAULT_RESUME_PROMPT_TEMPLATE,
   };
 }
 
@@ -36,6 +40,7 @@ export function resolveDefaultPrompts(overrides?: Partial<DefaultPromptOverrides
     stage2Prompt: overrides?.stage2Prompt?.trim() || codeDefaults.stage2Prompt,
     qaPrompt: overrides?.qaPrompt?.trim() || codeDefaults.qaPrompt,
     coverLetterPrompt: overrides?.coverLetterPrompt?.trim() || codeDefaults.coverLetterPrompt,
+    resumePrompt: overrides?.resumePrompt?.trim() || codeDefaults.resumePrompt,
   };
 }
 
@@ -47,6 +52,7 @@ export async function getDefaultPrompts(): Promise<DefaultPrompts> {
       stage2Prompt: true,
       qaPrompt: true,
       coverLetterPrompt: true,
+      resumePrompt: true,
     },
   });
 
@@ -66,6 +72,7 @@ export async function getDefaultPromptSettings(): Promise<{
       stage2Prompt: true,
       qaPrompt: true,
       coverLetterPrompt: true,
+      resumePrompt: true,
     },
   });
 
@@ -74,6 +81,7 @@ export async function getDefaultPromptSettings(): Promise<{
     stage2Prompt: settings?.stage2Prompt ?? null,
     qaPrompt: settings?.qaPrompt ?? null,
     coverLetterPrompt: settings?.coverLetterPrompt ?? null,
+    resumePrompt: settings?.resumePrompt ?? null,
   };
 
   return {
@@ -98,6 +106,9 @@ export async function updateDefaultPrompts(input: Partial<DefaultPromptOverrides
   if ('coverLetterPrompt' in input) {
     data.coverLetterPrompt = input.coverLetterPrompt?.trim() ? input.coverLetterPrompt.trim() : null;
   }
+  if ('resumePrompt' in input) {
+    data.resumePrompt = input.resumePrompt?.trim() ? input.resumePrompt.trim() : null;
+  }
 
   const settings = await prisma.defaultPromptSettings.upsert({
     where: { id: 'default' },
@@ -107,6 +118,7 @@ export async function updateDefaultPrompts(input: Partial<DefaultPromptOverrides
       stage2Prompt: data.stage2Prompt ?? null,
       qaPrompt: data.qaPrompt ?? null,
       coverLetterPrompt: data.coverLetterPrompt ?? null,
+      resumePrompt: data.resumePrompt ?? null,
     },
     update: data,
     select: {
@@ -114,6 +126,7 @@ export async function updateDefaultPrompts(input: Partial<DefaultPromptOverrides
       stage2Prompt: true,
       qaPrompt: true,
       coverLetterPrompt: true,
+      resumePrompt: true,
     },
   });
 

@@ -4,16 +4,18 @@ import { useEffect, useState } from 'react';
 import {
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
+  DEFAULT_RESUME_PROMPT_TEMPLATE,
   QA_PROMPT_TEMPLATE,
   COVER_LETTER_PROMPT_TEMPLATE,
 } from '@/app/utils/promptBuilder';
 import type { DefaultPrompts } from '@/lib/defaultPrompts';
 
-type PromptKey = 'stage1Prompt' | 'stage2Prompt' | 'qaPrompt' | 'coverLetterPrompt';
+type PromptKey = 'stage1Prompt' | 'stage2Prompt' | 'resumePrompt' | 'qaPrompt' | 'coverLetterPrompt';
 
 const PROMPT_TABS: { key: PromptKey; label: string }[] = [
   { key: 'stage1Prompt', label: 'Stage 1 Prompt' },
   { key: 'stage2Prompt', label: 'Stage 2 Prompt' },
+  { key: 'resumePrompt', label: 'Resume Prompt' },
   { key: 'qaPrompt', label: 'QA Prompt' },
   { key: 'coverLetterPrompt', label: 'Cover Letter Prompt' },
 ];
@@ -23,6 +25,7 @@ const CODE_DEFAULTS: DefaultPrompts = {
   stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
   qaPrompt: QA_PROMPT_TEMPLATE,
   coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
+  resumePrompt: DEFAULT_RESUME_PROMPT_TEMPLATE,
 };
 
 const PLACEHOLDER_NOTES: Record<PromptKey, string> = {
@@ -30,6 +33,8 @@ const PLACEHOLDER_NOTES: Record<PromptKey, string> = {
     'Placeholders: ${profileData}, ${jobDescription}, ${targetTitle}, ${baseResume}',
   stage2Prompt:
     'Placeholders: ${profileData}, ${jobDescription}, ${plannerOutput}, ${domain}, ${headline}, ${roles}, ${experienceCount}, ${targetTitle}',
+  resumePrompt:
+    '1-stage Resume Prompt. Placeholders: ${profileData}, ${jobDescription}, ${plannerOutput}, ${domain}, ${headline}, ${roles}, ${experienceCount}, ${targetTitle}',
   qaPrompt: 'Shared QA prompt copied by the main page QA button.',
   coverLetterPrompt:
     'Placeholders: ${Submission_Type} (Manual_Text_Input or PDF_Document). Copied by the main page Cover letter prompt button.',
@@ -46,6 +51,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
   const [overrides, setOverrides] = useState<Record<PromptKey, boolean>>({
     stage1Prompt: false,
     stage2Prompt: false,
+    resumePrompt: false,
     qaPrompt: false,
     coverLetterPrompt: false,
   });
@@ -70,6 +76,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
       setOverrides({
         stage1Prompt: !!data.overrides?.stage1Prompt,
         stage2Prompt: !!data.overrides?.stage2Prompt,
+        resumePrompt: !!data.overrides?.resumePrompt,
         qaPrompt: !!data.overrides?.qaPrompt,
         coverLetterPrompt: !!data.overrides?.coverLetterPrompt,
       });
@@ -110,6 +117,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
       setOverrides({
         stage1Prompt: !!data.overrides?.stage1Prompt,
         stage2Prompt: !!data.overrides?.stage2Prompt,
+        resumePrompt: !!data.overrides?.resumePrompt,
         qaPrompt: !!data.overrides?.qaPrompt,
         coverLetterPrompt: !!data.overrides?.coverLetterPrompt,
       });
@@ -147,6 +155,7 @@ export default function DefaultPromptEditor({ onUpdate }: DefaultPromptEditorPro
       setOverrides({
         stage1Prompt: !!data.overrides?.stage1Prompt,
         stage2Prompt: !!data.overrides?.stage2Prompt,
+        resumePrompt: !!data.overrides?.resumePrompt,
         qaPrompt: !!data.overrides?.qaPrompt,
         coverLetterPrompt: !!data.overrides?.coverLetterPrompt,
       });

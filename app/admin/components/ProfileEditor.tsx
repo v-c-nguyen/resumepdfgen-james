@@ -656,6 +656,21 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
 
               <div>
                 <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Resume Prompt (1-stage)</label>
+                </div>
+                <textarea
+                  value={defaultPrompts.resumePrompt}
+                  readOnly
+                  rows={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-900"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Shared resume prompt used by the main page &quot;Resume Prompt&quot; button in 1-stage mode. Edit it in Default Prompts.
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">QA Prompt</label>
                 </div>
                 <textarea

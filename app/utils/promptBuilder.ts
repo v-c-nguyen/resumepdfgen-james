@@ -434,6 +434,9 @@ Education:
 - Clean formatting
 `.trim();
 
+/** Default for 1-stage "Resume Prompt" on the main page (editable separately from Stage 2 in admin). */
+export const DEFAULT_RESUME_PROMPT_TEMPLATE = DEFAULT_STAGE3_PROMPT_TEMPLATE;
+
 export const QA_PROMPT_TEMPLATE =
   'Answer the following questions based strictly on the provided Job Description and Resume. Each response must be 1–2 concise sentences, directly relevant, and grounded in the candidate’s experience. Avoid assumptions, filler, or repetition, and ensure answers are specific, professional, and fact-based.';
 

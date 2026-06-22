@@ -11,6 +11,7 @@ import {
   CoverLetterSubmissionType,
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
+  DEFAULT_RESUME_PROMPT_TEMPLATE,
   extractRoleTitlesFromProfile,
   parseStage1Output,
   QA_PROMPT_TEMPLATE,
@@ -195,6 +196,7 @@ export default function Home() {
     stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
     qaPrompt: QA_PROMPT_TEMPLATE,
     coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
+    resumePrompt: DEFAULT_RESUME_PROMPT_TEMPLATE,
   });
   const [showCoverLetterPicker, setShowCoverLetterPicker] = useState(false);
   const [coverLetterSubmissionType, setCoverLetterSubmissionType] =
@@ -283,39 +285,10 @@ export default function Home() {
     await copyPromptToClipboard(promptText, 'Stage 1 prompt copied');
   };
 
-  /** Builds the markdown resume prompt (formerly “stage 3” in code / DB: customStage3Prompt). */
+  /** 2-stage only: builds Stage 2 prompt from pasted Stage 1 LLM output. */
   const handleGenerateStage2Prompt = async () => {
     const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
     const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
-
-    if (promptGenerationMode === '1-stage') {
-      const stage1Output = buildSelectedDomainStage1Output();
-      const stage2Output: Stage2Output = {
-        roles: parseRolePlanJson(rolePlanJson) ?? [],
-      };
-      const plannerOutput = JSON.stringify(
-        {
-          domain: stage1Output.domain,
-          headline: stage1Output.headline,
-          seniority: stage1Output.seniority,
-          roles: stage2Output.roles,
-        },
-        null,
-        2
-      );
-      const promptText = buildStage3Prompt(
-        profileData,
-        jobDesc,
-        stage1Output,
-        stage2Output,
-        selectedProfile?.customStage3Prompt ?? defaultPrompts.stage2Prompt,
-        selectedProfile?.targetTitle,
-        plannerOutput
-      );
-      await copyPromptToClipboard(promptText, 'Stage 2 prompt copied');
-      return;
-    }
-
     const stage1Output =
       parseStage1Output(stage1Result) ??
       buildFallbackStage1Output(profileData, selectedProfile?.targetTitle);
@@ -329,6 +302,36 @@ export default function Home() {
       stage1Result.trim()
     );
     await copyPromptToClipboard(promptText, 'Stage 2 prompt copied');
+  };
+
+  /** 1-stage only: builds resume prompt from domain & role plan (no Stage 1 LLM step). */
+  const handleGenerateResumePrompt = async () => {
+    const profileData = selectedProfile?.resumeText?.trim() || '[Paste profile/resume data here]';
+    const jobDesc = jobDescriptionForPrompt.trim() || '[Paste job description here]';
+    const stage1Output = buildSelectedDomainStage1Output();
+    const stage2Output: Stage2Output = {
+      roles: parseRolePlanJson(rolePlanJson) ?? [],
+    };
+    const plannerOutput = JSON.stringify(
+      {
+        domain: stage1Output.domain,
+        headline: stage1Output.headline,
+        seniority: stage1Output.seniority,
+        roles: stage2Output.roles,
+      },
+      null,
+      2
+    );
+    const promptText = buildStage3Prompt(
+      profileData,
+      jobDesc,
+      stage1Output,
+      stage2Output,
+      defaultPrompts.resumePrompt,
+      selectedProfile?.targetTitle,
+      plannerOutput
+    );
+    await copyPromptToClipboard(promptText, 'Resume prompt copied');
   };
 
   const handleGenerateQaPrompt = async () => {
@@ -480,24 +483,35 @@ export default function Home() {
                   2-stage
                 </button>
               </div>
-              {promptGenerationMode === '2-stage' && (
+              {promptGenerationMode === '1-stage' ? (
                 <button
                   type="button"
-                  onClick={handleGenerateStage1Prompt}
+                  onClick={handleGenerateResumePrompt}
                   className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
                 >
                   <Sparkles className="size-4 shrink-0" />
-                  Stage 1
+                  Resume Prompt
                 </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleGenerateStage1Prompt}
+                    className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+                  >
+                    <Sparkles className="size-4 shrink-0" />
+                    Stage 1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGenerateStage2Prompt}
+                    className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
+                  >
+                    <Sparkles className="size-4 shrink-0" />
+                    Stage 2
+                  </button>
+                </>
               )}
-              <button
-                type="button"
-                onClick={handleGenerateStage2Prompt}
-                className={`inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-md py-1.5 px-3 hover:bg-zinc-300 hover:border-zinc-400 ${btnMotion}`}
-              >
-                <Sparkles className="size-4 shrink-0" />
-                Stage 2
-              </button>
               <button
                 type="button"
                 onClick={handleGenerateQaPrompt}

@@ -6,6 +6,7 @@ import { BaseResumeProfile } from '@/app/data/baseResumes';
 import {
   DEFAULT_STAGE1_PROMPT_TEMPLATE,
   DEFAULT_STAGE3_PROMPT_TEMPLATE,
+  DEFAULT_RESUME_PROMPT_TEMPLATE,
   QA_PROMPT_TEMPLATE,
   COVER_LETTER_PROMPT_TEMPLATE,
 } from '@/app/utils/promptBuilder';
@@ -25,6 +26,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     stage2Prompt: DEFAULT_STAGE3_PROMPT_TEMPLATE,
     qaPrompt: QA_PROMPT_TEMPLATE,
     coverLetterPrompt: COVER_LETTER_PROMPT_TEMPLATE,
+    resumePrompt: DEFAULT_RESUME_PROMPT_TEMPLATE,
   });
   const [loading, setLoading] = useState(true);
 

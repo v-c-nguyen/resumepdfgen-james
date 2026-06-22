@@ -39,6 +39,7 @@ model DefaultPromptSettings {
   stage2Prompt       String?  @db.Text
   qaPrompt           String?  @db.Text
   coverLetterPrompt  String?  @db.Text
+  resumePrompt       String?  @db.Text
   updatedAt          DateTime @updatedAt
 
   @@map("default_prompt_settings")
