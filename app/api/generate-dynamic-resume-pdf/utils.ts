@@ -26,9 +26,12 @@ export const RESUME_PAGE_BOTTOM_MARGIN = 50;
 export function baselineFitsAboveBottomMargin(
   baselineY: number,
   marginBottom: number,
-  lineHeight: number
+  requiredHeight: number
 ): boolean {
-  return baselineY - lineHeight * 0.25 >= marginBottom;
+  // For multi-line blocks, `requiredHeight` is the total baseline spacing used by the block.
+  // We reserve only a small portion below the last baseline because `lineHeight` mainly
+  // represents leading between baselines and not exact glyph height.
+  return baselineY - requiredHeight + requiredHeight * 0.75 >= marginBottom;
 }
 
 // Validation helpers
@@ -337,7 +340,7 @@ export function parseRoleFocusLine(rawLine: string): string | null {
 
 export type RoleFocusDrawParams = {
   page: PDFPage;
-  ensurePageSpace: (requiredHeight?: number) => void;
+  ensurePageSpace: (requiredHeight?: number, lineHeight?: number) => void;
   textLeft: number;
   y: number;
   contentWidth: number;
@@ -385,7 +388,7 @@ export function drawRoleFocusBlock(p: RoleFocusDrawParams): number {
   const rectHeight = p.bodyLineHeight * wrapped.length + padding * 2;
 
   if (p.backgroundColor) {
-    p.ensurePageSpace(rectHeight);
+    p.ensurePageSpace(rectHeight + p.bodyLineHeight, p.bodyLineHeight);
     p.page.drawRectangle({
       x: backgroundStartX,
       y: rectBottom,
@@ -394,7 +397,7 @@ export function drawRoleFocusBlock(p: RoleFocusDrawParams): number {
       color: p.backgroundColor,
     });
   } else {
-    p.ensurePageSpace(p.bodyLineHeight);
+    p.ensurePageSpace(p.bodyLineHeight, p.bodyLineHeight);
   }
 
   if (p.borderColor) {
@@ -706,7 +709,7 @@ export function drawTextWithBold(
 /** Education block: first row(s) = degree; next row(s) = institution (wrapped) with graduation period right-aligned on the first meta row. */
 export type EducationTwoRowParams = {
   page: PDFPage;
-  ensurePageSpace: () => void;
+  ensurePageSpace: (requiredHeight?: number, lineHeight?: number) => void;
   textLeft: number;
   y: number;
   contentWidth: number;
@@ -732,20 +735,21 @@ export function drawEducationTwoRows(p: EducationTwoRowParams): number {
   let y = p.y;
   const dw = p.degreeWrapSubtract ?? 10;
   const degreeLines = wrapText(p.degree, p.fontBold, p.degreeSize, p.contentWidth - dw, wg);
-  for (const degreeLine of degreeLines) {
-    p.ensurePageSpace();
-    drawTextWithBold(p.page, degreeLine, p.textLeft, y, p.font, p.fontBold, p.degreeSize, p.degreeColor, wg);
-    y -= p.bodyLineHeight;
-  }
-
   const periodText = formatDate(p.periodRaw.trim()).trim();
   const periodW = p.font.widthOfTextAtSize(periodText, p.metaSize);
   const periodX = p.rightEdgeX - periodW;
   const gap = 12;
   const firstLineMax = Math.max(60, periodX - p.textLeft - gap);
   const uniLines = wrapText(p.institution, p.font, p.metaSize, firstLineMax, wg);
+  const requiredHeight = p.bodyLineHeight * (degreeLines.length + uniLines.length);
 
-  p.ensurePageSpace();
+  p.ensurePageSpace(requiredHeight);
+
+  for (const degreeLine of degreeLines) {
+    drawTextWithBold(p.page, degreeLine, p.textLeft, y, p.font, p.fontBold, p.degreeSize, p.degreeColor, wg);
+    y -= p.bodyLineHeight;
+  }
+
   drawTextWithWordGap(p.page, uniLines[0] ?? '', p.textLeft, y, p.metaSize, p.font, p.mutedColor, wg);
   p.page.drawText(periodText, {
     x: periodX,
@@ -757,7 +761,6 @@ export function drawEducationTwoRows(p: EducationTwoRowParams): number {
   y -= p.bodyLineHeight;
 
   for (let i = 1; i < uniLines.length; i++) {
-    p.ensurePageSpace();
     drawTextWithWordGap(p.page, uniLines[i], p.textLeft, y, p.metaSize, p.font, p.mutedColor, wg);
     y -= p.bodyLineHeight;
   }
