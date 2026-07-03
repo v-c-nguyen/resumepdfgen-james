@@ -8,6 +8,7 @@ export type BaseResumeProfile = {
   customStage2Prompt?: string; // legacy / unused; merged into Stage 1
   customStage3Prompt?: string; // optional Stage 3 custom prompt
   customStage4Prompt?: string; // optional Stage 4 custom prompt
+  customResumePrompt?: string; // optional 1-stage resume prompt
   pdfTemplate?: number; // PDF template identifier (e.g., 'default', 'modern', 'classic')
   email?: string;
   phoneNumber?: string;

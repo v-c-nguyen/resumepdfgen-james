@@ -88,6 +88,7 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
       customStage2Prompt: undefined,
       customStage3Prompt: undefined,
       customStage4Prompt: undefined,
+      customResumePrompt: undefined,
       pdfTemplate: pdfTemplates.length > 0 ? pdfTemplates[0].value : 1,
       email: '',
       phoneNumber: '',
@@ -133,6 +134,7 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
             customStage2Prompt: editingProfile.customStage2Prompt ?? null,
             customStage3Prompt: editingProfile.customStage3Prompt ?? null,
             customStage4Prompt: editingProfile.customStage4Prompt ?? null,
+            customResumePrompt: editingProfile.customResumePrompt ?? null,
             pdfTemplate: editingProfile.pdfTemplate || (pdfTemplates.length > 0 ? pdfTemplates[0].value : 1),
             email: editingProfile.email || undefined,
             phoneNumber: editingProfile.phoneNumber || undefined,
@@ -151,6 +153,7 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
             customStage2Prompt: editingProfile.customStage2Prompt ?? null,
             customStage3Prompt: editingProfile.customStage3Prompt ?? null,
             customStage4Prompt: editingProfile.customStage4Prompt ?? null,
+            customResumePrompt: editingProfile.customResumePrompt ?? null,
             pdfTemplate: editingProfile.pdfTemplate || (pdfTemplates.length > 0 ? pdfTemplates[0].value : 1),
             email: editingProfile.email || undefined,
             phoneNumber: editingProfile.phoneNumber || undefined,
@@ -249,6 +252,7 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
   if (editingProfile) {
     const currentStage1Prompt = editingProfile.customStage1Prompt || defaultPrompts.stage1Prompt;
     const currentStage3Prompt = editingProfile.customStage3Prompt || defaultPrompts.stage2Prompt;
+    const currentResumePrompt = editingProfile.customResumePrompt || defaultPrompts.resumePrompt;
 
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
@@ -550,6 +554,7 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
                       customStage2Prompt: undefined,
                       customStage3Prompt: undefined,
                       customStage4Prompt: undefined,
+                      customResumePrompt: undefined,
                     });
                   }}
                   className="text-sm text-gray-600 hover:text-gray-800 underline"
@@ -657,15 +662,36 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">Resume Prompt (1-stage)</label>
+                  <button
+                    onClick={() => {
+                      setEditingProfile({ ...editingProfile, customResumePrompt: undefined });
+                    }}
+                    className="text-xs text-gray-600 hover:text-gray-800 underline"
+                  >
+                    Reset Resume
+                  </button>
                 </div>
                 <textarea
-                  value={defaultPrompts.resumePrompt}
-                  readOnly
-                  rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-900"
+                  value={currentResumePrompt}
+                  onChange={(e) => {
+                    const newPrompt = e.target.value;
+                    if (newPrompt !== defaultPrompts.resumePrompt) {
+                      setEditingProfile({ ...editingProfile, customResumePrompt: newPrompt });
+                    } else {
+                      setEditingProfile({ ...editingProfile, customResumePrompt: undefined });
+                    }
+                  }}
+                  rows={14}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm text-gray-900"
+                  placeholder="Enter custom resume prompt here..."
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  Shared resume prompt used by the main page &quot;Resume Prompt&quot; button in 1-stage mode. Edit it in Default Prompts.
+                  {currentResumePrompt.length} characters
+                  {editingProfile.customResumePrompt ? (
+                    <span className="ml-2 text-blue-600">• Resume custom prompt is active</span>
+                  ) : (
+                    <span className="ml-2 text-gray-500">• Using default resume prompt</span>
+                  )}
                 </p>
               </div>
 
@@ -766,6 +792,9 @@ export default function ProfileEditor({ profiles, defaultPrompts, onUpdate }: Pr
                     )}
                     {profile.customStage3Prompt && (
                       <p className="text-blue-600">✓ Stage 2 custom prompt configured</p>
+                    )}
+                    {profile.customResumePrompt && (
+                      <p className="text-blue-600">✓ Resume custom prompt configured</p>
                     )}
                     {profile.industry && (
                       <p>Industry: {profile.industry}</p>

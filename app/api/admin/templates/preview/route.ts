@@ -37,6 +37,7 @@ Technical Skills:
 
 Professional Experience:
 Senior Software Engineer at Tech Corp: 01/2020 – Present
+Role Focus: Led platform modernization and cloud-native delivery for high-traffic enterprise products.
 • Led development of microservices architecture serving 1M+ users, improving system reliability by 40%
 • Architected and implemented real-time data processing pipeline using Node.js and Redis
 • Mentored team of 5 engineers, establishing best practices and code review processes

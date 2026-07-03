@@ -11,6 +11,8 @@ import {
   PDF_BULLET_DOT,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  parseRoleFocusLine,
+  drawRoleFocusBlock,
   baselineFitsAboveBottomMargin,
   RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
@@ -77,7 +79,7 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
     const headlineLines = wrapText(cleanedHeadline, font, 9.75, contentWidth * 0.64, WG);
     for (const line of headlineLines) {
       if (headerY <= headerBottomRuleY + headerBottomPadding + 1) break;
-      drawTextWithWordGap(context.page, line, contentX, headerY, 9.75, font, MUTED, WG);
+      drawTextWithWordGap(context.page, line, contentX, headerY, 10.5, font, MUTED, WG);
       headerY -= 11.4;
     }
   }
@@ -119,7 +121,7 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
   for (const raw of bodyLines) {
     const line = raw.trim();
     if (!line) {
-      y -= 6;
+      y -= 12;
       continue;
     }
 
@@ -141,14 +143,14 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
         thickness: 0.8,
         color: SECTION_RULE,
       });
-      y -= 12;
+      y -= 18;
       continue;
     }
 
     const exp = parseExperienceLine(line);
     if (exp) {
       if (hasRenderedExperience) {
-        y -= 7;
+        y -= 3;
       }
       ensurePageSpace();
       const titleLines = wrapText(exp.title, fontBold, 10.65, contentWidth, WG);
@@ -173,9 +175,43 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
         drawTextWithWordGap(context.page, companyLines[i], contentX, y, companyMetaSize, font, MUTED, WG);
         y -= lineHeight;
       }
-      y -= 4;
+      y -= 6;
       hasRenderedExperience = true;
       continue;
+    }
+
+    const isExperienceSection =
+      currentSection === 'experience' || currentSection === 'professional experience';
+    if (isExperienceSection) {
+      const roleFocusText = parseRoleFocusLine(line);
+      if (roleFocusText !== null) {
+        y -= 2;
+        y = drawRoleFocusBlock({
+          page: context.page,
+          ensurePageSpace,
+          textLeft: contentX,
+          y,
+          contentWidth,
+          bodyLineHeight: lineHeight,
+          font,
+          fontBold,
+          labelSize: 9.75,
+          textSize: 9.55,
+          labelColor: ACCENT,
+          textColor: MUTED,
+          focusText: roleFocusText,
+          bodyInsetLeft: 0,
+          bodyInnerSubtract: 8,
+          wordGapExtra: WG,
+          backgroundColor: rgb(0.95, 0.95, 0.95),
+          backgroundPadding: 5,
+          backgroundTextInset: 8,
+          borderColor: ACCENT,
+          borderWidth: 2,
+        });
+        y -= 8;
+        continue;
+      }
     }
 
     if (currentSection === 'education') {
@@ -251,13 +287,13 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
           WG
         );
       }
-      y -= SKILLS_ROW_EXTRA_GAP;
+      y -= lineHeight;
       for (let i = 1; i < wrappedSkills.length; i++) {
-        y -= lineHeight + SKILLS_ROW_EXTRA_GAP;
         ensurePageSpace();
         drawTextWithWordGap(context.page, wrappedSkills[i], contentX + bulletWidth, y, skillBody, font, INK, WG);
+        y -= lineHeight;
       }
-      y -= 15;
+      y -= 6;
       continue;
     }
 
@@ -289,9 +325,9 @@ export async function renderTemplate11(context: TemplateContext): Promise<Uint8A
         } else {
           drawTextWithBold(context.page, segment, contentX + 8, y, font, fontBold, 9.8, INK, WG);
         }
-        y -= lineHeight + (inSkillsSection ? SKILLS_ROW_EXTRA_GAP : 0);
+        y -= lineHeight;
       }
-      y -= inSkillsSection ? 2 : 1;
+      y -= 6;
       continue;
     }
 

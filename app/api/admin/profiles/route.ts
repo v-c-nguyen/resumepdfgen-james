@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
         customStage2Prompt: true,
         customStage3Prompt: true,
         customStage4Prompt: true,
+        customResumePrompt: true,
         pdfTemplate: true,
         email: true,
         phoneNumber: true,
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
       customStage2Prompt,
       customStage3Prompt,
       customStage4Prompt,
+      customResumePrompt,
       pdfTemplate,
       email,
       phoneNumber,
@@ -99,6 +101,7 @@ export async function POST(req: NextRequest) {
         customStage2Prompt: customStage2Prompt || null,
         customStage3Prompt: customStage3Prompt || null,
         customStage4Prompt: customStage4Prompt || null,
+        customResumePrompt: customResumePrompt || null,
         pdfTemplate: pdfTemplate ?? 1,
         email: email || null,
         phoneNumber: phoneNumber || null,
@@ -135,6 +138,7 @@ export async function PUT(req: NextRequest) {
       customStage2Prompt,
       customStage3Prompt,
       customStage4Prompt,
+      customResumePrompt,
       pdfTemplate,
       email,
       phoneNumber,
@@ -162,6 +166,7 @@ export async function PUT(req: NextRequest) {
         customStage2Prompt: true,
         customStage3Prompt: true,
         customStage4Prompt: true,
+        customResumePrompt: true,
       },
     });
     
@@ -198,6 +203,8 @@ export async function PUT(req: NextRequest) {
           customStage3Prompt === undefined ? existingProfile.customStage3Prompt : (customStage3Prompt || null),
         customStage4Prompt:
           customStage4Prompt === undefined ? existingProfile.customStage4Prompt : (customStage4Prompt || null),
+        customResumePrompt:
+          customResumePrompt === undefined ? existingProfile.customResumePrompt : (customResumePrompt || null),
         pdfTemplate: pdfTemplate ?? 1,
         email: email || null,
         phoneNumber: phoneNumber || null,

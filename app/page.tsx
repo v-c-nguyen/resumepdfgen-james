@@ -327,7 +327,7 @@ export default function Home() {
       jobDesc,
       stage1Output,
       stage2Output,
-      defaultPrompts.resumePrompt,
+      selectedProfile?.customResumePrompt ?? defaultPrompts.resumePrompt,
       selectedProfile?.targetTitle,
       plannerOutput
     );

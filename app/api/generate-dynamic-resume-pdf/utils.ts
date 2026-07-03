@@ -323,6 +323,121 @@ export function parseEducationThreePartLine(rawLine: string): { degree: string; 
   return { degree: m[1].trim(), institution: m[2].trim(), period: m[3].trim() };
 }
 
+export const ROLE_FOCUS_LABEL = 'Role Focus:';
+
+/** Parse `Role Focus: …` lines (optional leading bullet). Returns focus text or null if not a role-focus line. */
+export function parseRoleFocusLine(rawLine: string): string | null {
+  const line = rawLine.replace(/^[\-\·•]\s*/, '').trim();
+  if (!/^role\s+focus\s*:/i.test(line)) return null;
+  const match = line.match(/^role\s+focus\s*:\s*(.*)$/i);
+  if (!match) return null;
+  const text = match[1].trim();
+  return text || null;
+}
+
+export type RoleFocusDrawParams = {
+  page: PDFPage;
+  ensurePageSpace: (requiredHeight?: number) => void;
+  textLeft: number;
+  y: number;
+  contentWidth: number;
+  bodyLineHeight: number;
+  font: PDFFont;
+  fontBold: PDFFont;
+  labelSize: number;
+  textSize: number;
+  labelColor: RGB;
+  textColor: RGB;
+  focusText: string;
+  bodyInsetLeft?: number;
+  bodyInnerSubtract?: number;
+  wordGapExtra?: number;
+  backgroundColor?: RGB;
+  backgroundPadding?: number;
+  backgroundTextInset?: number;
+  borderColor?: RGB;
+  borderWidth?: number;
+};
+
+/** Render a role-focus paragraph (no bullet) with a bold label and wrapped body text. */
+export function drawRoleFocusBlock(p: RoleFocusDrawParams): number {
+  const wg = p.wordGapExtra ?? 0;
+  const inset = p.bodyInsetLeft ?? 0;
+  const textInset = p.backgroundTextInset ?? 0;
+  const innerSubtract = p.bodyInnerSubtract ?? 15;
+  const padding = p.backgroundPadding ?? 4;
+  const borderWidth = p.borderWidth ?? 1.2;
+  const label = ROLE_FOCUS_LABEL;
+  const labelWidth = p.fontBold.widthOfTextAtSize(label, p.labelSize);
+  const spaceWidth = p.font.widthOfTextAtSize(' ', p.textSize);
+  const backgroundStartX = p.textLeft + inset;
+  const rawWidth = p.contentWidth - innerSubtract;
+  const availableWidth = Math.max(48, rawWidth - textInset);
+  const firstLineStartX = backgroundStartX + textInset + labelWidth + spaceWidth;
+  const firstLineWidth = Math.max(48, availableWidth - labelWidth - spaceWidth);
+  const continuationWidth = Math.max(48, availableWidth);
+
+  const wrapped = wrapTextWithLineWidths(p.focusText, p.font, p.textSize, firstLineWidth, continuationWidth, wg);
+  let y = p.y;
+
+  const rectWidth = rawWidth + padding;
+  const rectBottom = y - p.bodyLineHeight * wrapped.length + padding;
+  const rectHeight = p.bodyLineHeight * wrapped.length + padding * 2;
+
+  if (p.backgroundColor) {
+    p.ensurePageSpace(rectHeight);
+    p.page.drawRectangle({
+      x: backgroundStartX,
+      y: rectBottom,
+      width: rectWidth,
+      height: rectHeight,
+      color: p.backgroundColor,
+    });
+  } else {
+    p.ensurePageSpace(p.bodyLineHeight);
+  }
+
+  if (p.borderColor) {
+    p.page.drawRectangle({
+      x: backgroundStartX,
+      y: rectBottom,
+      width: borderWidth,
+      height: rectHeight,
+      color: p.borderColor,
+    });
+  }
+
+  const textX = backgroundStartX + textInset;
+  p.page.drawText(label, {
+    x: textX,
+    y,
+    size: p.labelSize,
+    font: p.fontBold,
+    color: p.labelColor,
+  });
+  if (wrapped[0]) {
+    drawTextWithWordGap(p.page, wrapped[0], firstLineStartX, y, p.textSize, p.font, p.textColor, wg);
+  }
+  y -= p.bodyLineHeight;
+
+  for (let i = 1; i < wrapped.length; i++) {
+    p.ensurePageSpace(p.bodyLineHeight);
+    drawTextWithWordGap(
+      p.page,
+      wrapped[i],
+      textX,
+      y,
+      p.textSize,
+      p.font,
+      p.textColor,
+      wg
+    );
+    y -= p.bodyLineHeight;
+  }
+
+  return y;
+}
+
 /** Extra distance (pt) between word boundaries when rendering templates 10–15 (wider inter-word spacing). */
 export const RESUME_TEMPLATES_11_15_WORD_GAP_PT = 0.42;
 

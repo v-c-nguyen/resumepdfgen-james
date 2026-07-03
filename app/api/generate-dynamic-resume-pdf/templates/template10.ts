@@ -12,11 +12,13 @@ import {
   wrapSkillsAfterCategory,
   parseEducationThreePartLine,
   drawEducationTwoRows,
+  parseRoleFocusLine,
+  drawRoleFocusBlock,
   baselineFitsAboveBottomMargin,
   RESUME_PAGE_BOTTOM_MARGIN,
 } from '../utils';
 
-const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT;
+const WG = RESUME_TEMPLATES_11_15_WORD_GAP_PT + 0.15;
 
 // Template 10 Body Content Renderer - cohesive gentle executive style
 function renderBodyContentTemplate10(
@@ -183,6 +185,35 @@ function renderBodyContentTemplate10(
       }
     }
 
+    const isExperienceSection =
+      currentSection === 'experience' || currentSection === 'professional experience';
+    if (isExperienceSection) {
+      const roleFocusText = parseRoleFocusLine(line);
+      if (roleFocusText !== null) {
+        y -= 2;
+        y = drawRoleFocusBlock({
+          page: context.page,
+          ensurePageSpace,
+          textLeft: left,
+          y,
+          contentWidth,
+          bodyLineHeight,
+          font: serifFont,
+          fontBold: serifBoldFont,
+          labelSize: bodySize,
+          textSize: bodySize - 0.2,
+          labelColor: ACCENT,
+          textColor: MUTED_TEXT,
+          focusText: roleFocusText,
+          bodyInsetLeft: 2,
+          bodyInnerSubtract: 15,
+          wordGapExtra: WG,
+        });
+        y -= 5;
+        continue;
+      }
+    }
+
     if (currentSection === 'education') {
       const edu = parseEducationThreePartLine(line);
       if (edu) {
@@ -286,7 +317,7 @@ function renderBodyContentTemplate10(
           );
         }
       }
-      y -= bodyLineHeight + 2;
+      y -= bodyLineHeight + 4;
       continue;
     }
 
@@ -323,6 +354,7 @@ function renderBodyContentTemplate10(
 
       y -= bodyLineHeight;
     }
+    y -= 4;
   }
 
   return y;
@@ -343,11 +375,11 @@ export async function renderTemplate10(context: TemplateContext): Promise<Uint8A
   const CONTENT_LEFT = MARGIN_LEFT;
   const CONTENT_WIDTH = PAGE_WIDTH - CONTENT_LEFT - MARGIN_RIGHT;
 
-  const NAME_SIZE = 25.85;
-  const HEADLINE_SIZE = 11.35;
-  const CONTACT_SIZE = 9.2;
-  const SECTION_HEADER_SIZE = 10.35;
-  const BODY_SIZE = 9.95;
+  const NAME_SIZE = 27.2;
+  const HEADLINE_SIZE = 12.0;
+  const CONTACT_SIZE = 9.8;
+  const SECTION_HEADER_SIZE = 10.9;
+  const BODY_SIZE = 10.4;
   const serifFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const serifBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const headlineWithoutLinks = headline

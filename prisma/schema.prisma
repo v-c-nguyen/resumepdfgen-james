@@ -18,6 +18,7 @@ model Profile {
   customStage2Prompt String? @db.Text
   customStage3Prompt String? @db.Text
   customStage4Prompt String? @db.Text
+  customResumePrompt String? @db.Text
   pdfTemplate  Int      @default(1)
   email        String?
   phoneNumber  String?
